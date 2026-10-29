@@ -17,5 +17,3 @@ call. (Don't expect the skill to pre-approve this itself: a skill that declares 
 needs an approval just to load, and is silently skipped in headless `claude -p` runs.)
 
 To stop the prompts, add a permission rule for the skill's scripts in your own settings.
-
-Prototype quality; see [`docs/design.md`](docs/design.md).
