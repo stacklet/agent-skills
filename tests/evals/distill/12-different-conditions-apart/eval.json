@@ -1,0 +1,95 @@
+{
+ "about": "Two unrelated conditions on one type (versioning, access logging) stay separate bullets: the joining rules (one condition, a mark-for-op set) mustn't over-merge.",
+ "resource_type": "aws.s3",
+ "policies": [
+  {
+   "name": "acme:s3-versioning",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-versioning",
+    "resource": "aws.s3",
+    "description": "Buckets keep object versions.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "Versioning.Status",
+      "op": "ne",
+      "value": "Enabled"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-access-logging",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-access-logging",
+    "resource": "aws.s3",
+    "description": "Buckets log access.",
+    "filters": [
+     {
+      "type": "bucket-logging",
+      "op": "disabled"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "two-bullets",
+   "apart": true,
+   "policies": [
+    "acme:s3-versioning",
+    "acme:s3-access-logging"
+   ]
+  },
+  {
+   "id": "versioning",
+   "policies": [
+    "acme:s3-versioning"
+   ],
+   "says": [
+    "Versioning"
+   ]
+  },
+  {
+   "id": "logging",
+   "policies": [
+    "acme:s3-access-logging"
+   ],
+   "says": [
+    "logging"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning@1\n- S3 buckets with access logging disabled are flagged. Buckets with logging on pass. MEDIUM, ORG; reports only. acme:s3-access-logging@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without versioning (`Versioning.Status` not `Enabled`) or access logging are flagged. Buckets with both pass. MEDIUM, ORG; reports only. acme:s3-versioning@1 acme:s3-access-logging@1",
+   "fails": [
+    "two-bullets"
+   ]
+  },
+  {
+   "output": "- S3 buckets without object history are flagged. Buckets keeping old objects pass. MEDIUM, ORG; reports only. acme:s3-versioning@1\n- S3 buckets that record nothing are flagged. Others pass. MEDIUM, ORG; reports only. acme:s3-access-logging@1",
+   "fails": [
+    "versioning",
+    "logging"
+   ]
+  }
+ ]
+}

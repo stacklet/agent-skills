@@ -1,0 +1,189 @@
+{
+ "about": "Access keys unused (or never used) and unrotated for 45 days are disabled, and for 120 days removed: one check at two ages with escalating actions. Each age is said with its action, so an agent learns both that keys are switched off first and that they are deleted later.",
+ "resource_type": "aws.iam-user",
+ "policies": [
+  {
+   "name": "acme:iam-keys-stale-disable",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "iam-keys-stale-disable",
+    "resource": "aws.iam-user",
+    "filters": [
+     {
+      "and": [
+       {
+        "type": "value",
+        "key": "Arn",
+        "op": "not-in",
+        "value_from": {
+         "url": "s3://example-config/exclusions.csv",
+         "format": "csv2dict",
+         "expr": "arn"
+        }
+       },
+       {
+        "or": [
+         {
+          "type": "credential",
+          "key": "access_keys.last_used_date",
+          "value": null
+         },
+         {
+          "type": "credential",
+          "key": "access_keys.last_used_date",
+          "op": "gte",
+          "value": 45,
+          "value_type": "age"
+         }
+        ]
+       },
+       {
+        "type": "credential",
+        "key": "access_keys.last_rotated",
+        "op": "gte",
+        "value": 45,
+        "value_type": "age"
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "remove-keys",
+      "matched": true,
+      "disable": true
+     },
+     {
+      "type": "webhook",
+      "url": "https://hooks.example.com/governance",
+      "batch": false,
+      "body": "{account:account_id, resource:resource.id, policy:policy.name}"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:iam-keys-stale-remove",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "iam-keys-stale-remove",
+    "resource": "aws.iam-user",
+    "filters": [
+     {
+      "and": [
+       {
+        "type": "value",
+        "key": "Arn",
+        "op": "not-in",
+        "value_from": {
+         "url": "s3://example-config/exclusions.csv",
+         "format": "csv2dict",
+         "expr": "arn"
+        }
+       },
+       {
+        "or": [
+         {
+          "type": "credential",
+          "key": "access_keys.last_used_date",
+          "value": null
+         },
+         {
+          "type": "credential",
+          "key": "access_keys.last_used_date",
+          "op": "gte",
+          "value": 120,
+          "value_type": "age"
+         }
+        ]
+       },
+       {
+        "type": "credential",
+        "key": "access_keys.last_rotated",
+        "op": "gte",
+        "value": 120,
+        "value_type": "age"
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "remove-keys",
+      "matched": true
+     },
+     {
+      "type": "webhook",
+      "url": "https://hooks.example.com/governance",
+      "batch": false,
+      "body": "{account:account_id, resource:resource.id, policy:policy.name}"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "disabled-at-45",
+   "policies": [
+    "acme:iam-keys-stale-disable"
+   ],
+   "says": [
+    "\\b45\\b",
+    "\\b(disables?|disabled|disabling|deactivates?|deactivated|deactivating|inactive)\\b"
+   ],
+   "not": [
+    "(?<!disabled at )(?<!disabled after )\\b45\\b(?!-day)[^.;]{0,40}\\b(are|is|get|gets) (removed|deleted)\\b|\\b(deletes?|deleted|deleting|removes?|removed|removing)\\s+(at|after|once)\\s+45\\b"
+   ]
+  },
+  {
+   "id": "removed-at-120",
+   "policies": [
+    "acme:iam-keys-stale-remove"
+   ],
+   "says": [
+    "\\b120\\b",
+    "\\b(deletes?|deleted|deleting|removes?|removed|removing)\\b"
+   ],
+   "not": [
+    "\\b(disables?|disabled|disabling|deactivates?|deactivated|deactivating)\\s+(at|after|once)\\s+120\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- IAM users whose access key was rotated 45 or more days ago and is unused for 45 days or never used are flagged, unless excluded; the 45-day policy disables the key, and the 120-day policy, on the same test at 120 days, removes it. Both post to a webhook. No severity; scheduled scans. acme:iam-keys-stale-disable@1, acme:iam-keys-stale-remove@1",
+   "fails": []
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- IAM access keys stale for 45 days are removed. No severity; scheduled scans. acme:iam-keys-stale-disable@1, acme:iam-keys-stale-remove@1",
+   "fails": [
+    "disabled-at-45",
+    "removed-at-120"
+   ]
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- IAM access keys unused for 45 or 120 days are removed; inactive keys pass. No severity; scheduled scans. acme:iam-keys-stale-disable@1, acme:iam-keys-stale-remove@1",
+   "fails": [
+    "disabled-at-45"
+   ]
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- IAM access keys unused and unrotated are removed at 45 days and disabled at 120 days. No severity; scheduled scans. acme:iam-keys-stale-disable@1, acme:iam-keys-stale-remove@1",
+   "fails": [
+    "disabled-at-45",
+    "removed-at-120"
+   ]
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- IAM user access keys last rotated 45 or more days ago and unused for 45 or more days (or never used) are flagged and disabled, with a webhook call for each user. The 120-day check flags keys unrotated and unused for 120 or more days and deletes them, so a key the 45-day policy disabled is deleted at 120 days if still unused. Keys used or rotated within the window pass. Scheduled scans; no severity or compliance framework. acme:iam-keys-stale-disable@1 and acme:iam-keys-stale-remove@1",
+   "fails": []
+  }
+ ]
+}

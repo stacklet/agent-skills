@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "add terraform for an SQS queue for order events to this repo, with a dead-letter queue.",
+  "setup": "repo contains fixture/estate-profile-elsewhere-repo: a provider that assumes a role in account 210987654321 (orders-prod, prod beta wave), and an .envrc selecting a local AWS profile whose SSO account is 456789012345 (the trial remediation account): the credentials the role is assumed from, not where the code deploys; the cache holds both accounts' lookups",
+  "start": {
+    "copy": "estate-profile-elsewhere-repo"
+  },
+  "expected_output": "Records the account the provider assumes its role into (210987654321) and not the local profile's (456789012345), which only supplies the credentials that role is assumed from; the wave-rolled tags (mrd:owner, mrd:service, mrd:environment) apply through it. The trial remediation is not presented as applying."
+}

@@ -1,0 +1,6 @@
+{
+  "kind": "flow",
+  "prompt": "terraform for one ec2 instance as a batch worker for our payment reconciliation jobs, with a 200GB data disk attached. ssh from our office range 203.0.113.0/24 only.",
+  "setup": "a full, current cache whose posture assessment asks a payments question bearing on aws.s3 and aws.rds only; the fake Stacklet MCP server serves the fixture",
+  "expected_output": "Shows aws.ec2 and aws.ebs, which no unanswered question bears on, so asks nothing about payments despite the prompt's mention of them, and fetches nothing (the cache is current): gp3, encrypted, IMDSv2, required tags, no open ingress."
+}

@@ -1,0 +1,27 @@
+name: "CI"
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+permissions: {}
+jobs:
+  Lint:
+    permissions:
+      contents: read
+    uses: stacklet/github-tooling/.github/workflows/run-script.yml@48cc95e34ca3ff105998f6b649ddee54bf6da4c2 # v1.1.0
+    secrets:
+      STEP_SECURITY_API_KEY: ${{ secrets.STEP_SECURITY_API_KEY }}
+    with:
+      pre-commit-cache: true
+      run: |
+        just lint
+  Tests:
+    permissions:
+      contents: read
+    uses: stacklet/github-tooling/.github/workflows/run-script.yml@48cc95e34ca3ff105998f6b649ddee54bf6da4c2 # v1.1.0
+    secrets:
+      STEP_SECURITY_API_KEY: ${{ secrets.STEP_SECURITY_API_KEY }}
+    with:
+      run: |
+        just test

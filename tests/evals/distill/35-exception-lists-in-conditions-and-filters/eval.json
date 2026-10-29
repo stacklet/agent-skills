@@ -1,0 +1,216 @@
+{
+ "about": "Access keys unused or unrotated for 90 days, checked everywhere but the accounts an exception file lists (a `conditions` entry, `account_id` `not-in` a CSV fetched from S3) and the users the same file lists (an `Arn` `not-in` filter), with a region condition on a global type (IAM users) that only avoids scanning them from every region. The bullet says listed accounts and listed users are exempt, without claiming to know who is on the file, never that only listed accounts are checked, and never that the rule is about us-east-1. The shape comes from a collection in the wild: one policy per business unit, each with its own exception file.",
+ "resource_type": "aws.iam-user",
+ "policies": [
+  {
+   "name": "acme:iam-access-keys-unused-90-days",
+   "version": 4,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "iam-access-keys-unused-90-days",
+    "resource": "aws.iam-user",
+    "conditions": [
+     {
+      "type": "value",
+      "key": "region",
+      "op": "eq",
+      "value": "us-east-1"
+     },
+     {
+      "type": "value",
+      "key": "account_id",
+      "op": "not-in",
+      "value_from": {
+       "url": "s3://acme-guardrail-config/access-key-exceptions.csv",
+       "format": "csv2dict",
+       "expr": "account"
+      }
+     }
+    ],
+    "filters": [
+     {
+      "and": [
+       {
+        "type": "value",
+        "key": "Arn",
+        "op": "not-in",
+        "value_from": {
+         "url": "s3://acme-guardrail-config/access-key-exceptions.csv",
+         "format": "csv2dict",
+         "expr": "arn"
+        }
+       },
+       {
+        "or": [
+         {
+          "type": "credential",
+          "key": "access_keys.last_used_date",
+          "value": null
+         },
+         {
+          "type": "credential",
+          "key": "access_keys.last_used_date",
+          "op": "gte",
+          "value": 90,
+          "value_type": "age"
+         },
+         {
+          "type": "credential",
+          "key": "access_keys.last_rotated",
+          "op": "gte",
+          "value": 90,
+          "value_type": "age"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "notify",
+      "violation_desc": "Access keys unused or not rotated for 90 days",
+      "action_desc": "Rotate or remove the key",
+      "subject": "IAM access key review",
+      "template": "default.html",
+      "to": [
+       "resource-owner",
+       "iam-review@acme.example"
+      ],
+      "transport": {
+       "type": "sqs",
+       "queue": "https://sqs.us-east-1.amazonaws.com/111122223333/acme-mailer"
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "listed-accounts-exempt",
+   "policies": [
+    "acme:iam-access-keys-unused-90-days"
+   ],
+   "says": [
+    "\\baccounts?\\b(?:[^.;]|\\.(?=\\S)){0,120}\\b(are |is )?(exempt|excluded|skipped|not (checked|evaluated|scanned|covered|flagged)|never (checked|evaluated|scanned|flagged)|pass(es)?)\\b|\\b(exempt|excluded|except|exempting|excluding|outside)\\b(?:[^.;]|\\.(?=\\S)){0,60}\\baccounts?\\b|\\b(unless|except|exempt|excepted|excluded|excluding|pass(es)?|outside)\\b(?:[^.;]|\\.(?=\\S)){0,160}\\baccounts?\\b(?:[^.;]|\\.(?=\\S)){0,40}\\b(listed|appears?|excepted|exception|(is|are) in|on (the|that|an?|either|it))\\b|\\baccounts?\\b(?:[^.;]|\\.(?=\\S)){0,20}\\b(is |are )?not (on|in) (the|that|an?|its)\\b(?:[^.;]|\\.(?=\\S)){0,50}\\b(list|file|csv)\\b"
+   ],
+   "not": [
+    "\\bonly\\b[^.;]{0,60}\\baccounts?\\b[^.;]{0,60}\\b(listed|in|on|named)\\b[^.;]{0,40}\\b(list|file|csv)\\b",
+    "\\b(in|for) accounts? (listed |named )?(in|on) (the|that|an?) [^.;]{0,50}\\b(list|file|csv)\\b,? [^.;]{0,80}\\b(are|is) (checked|flagged|scanned|covered)\\b"
+   ]
+  },
+  {
+   "id": "listed-users-exempt",
+   "policies": [
+    "acme:iam-access-keys-unused-90-days"
+   ],
+   "says": [
+    "\\b(users?|arns?)\\b(?:[^.;]|\\.(?=\\S)){0,200}\\b(are |is )?(exempt|excluded|skipped|not (checked|evaluated|scanned|covered|flagged)|never (checked|evaluated|scanned|flagged)|pass(es)?)\\b|\\b(unless|exempt|excluded|except|exempting|excluding)\\b(?:[^.;]|\\.(?=\\S)){0,60}\\b(users?|arns?)\\b|\\b(users?|arns?)\\b(?:[^.;]|\\.(?=\\S)){0,20}\\b(is |are )?not (on|in) (the|that|an?|its)\\b"
+   ],
+   "not": []
+  },
+  {
+   "id": "region-ignored",
+   "policies": [
+    "acme:iam-access-keys-unused-90-days"
+   ],
+   "says": [
+    "\\b90\\b[^.;]{0,15}\\bdays?\\b|\\b90-day\\b"
+   ],
+   "not": [
+    "\\bin `?us-east-1|\\bus-east-1`? (only|users)|\\bonly\\b[^.;]*\\bus-east-1",
+    "\\(`?us-east-1`?( region)?\\)|\\bin (the )?`?us-east-1`? region\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- IAM users with an access key never used, unused for 90 days or more, or not rotated for 90 days or more are flagged. Keys used and rotated within 90 days pass. Users in accounts listed in the access-key exception file are exempt, as are users the file lists by ARN. MEDIUM, ORG; scheduled scan; notifies the user's owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users whose access keys were never used, or were last used or rotated 90 or more days ago, are flagged, except in accounts excluded by an exception list and for user ARNs on that list. Keys used and rotated in the last 90 days pass. MEDIUM, ORG; scheduled scan; sends a notification. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users with access keys unused or unrotated for 90 days are flagged, except users whose ARN is on the exception list. Recently used, rotated keys pass. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "listed-accounts-exempt"
+   ]
+  },
+  {
+   "output": "- In accounts listed in the exception file, IAM users with access keys unused or unrotated for 90 days are flagged. Keys used and rotated within 90 days pass. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "listed-accounts-exempt",
+    "listed-users-exempt"
+   ]
+  },
+  {
+   "output": "- IAM users with access keys unused or unrotated for 90 days are flagged, but only in accounts listed in the exception file; users that file lists are exempt. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "listed-accounts-exempt"
+   ]
+  },
+  {
+   "output": "- IAM users with access keys unused or unrotated for 90 days are flagged; accounts on the exception list are exempt. Keys used and rotated within 90 days pass. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "listed-users-exempt"
+   ]
+  },
+  {
+   "output": "- IAM users in us-east-1 with access keys unused or unrotated for 90 days are flagged; accounts and users on the exception list are exempt. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- IAM users (us-east-1) with access keys unused or unrotated for 90 days are flagged; accounts and users on the exception list are exempt. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- IAM users with access keys unused or unrotated for a long time are flagged; accounts and users on the exception list are exempt. MEDIUM, ORG; scheduled scan; notifies the owner. acme:iam-access-keys-unused-90-days@4",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- IAM users with an access key whose last rotation was 90 or more days ago, whose last use was 90 or more days ago, or that has never been used (`access_keys.last_used_date` null) are flagged, unless the user's ARN is listed in the access-key exceptions file or the user's account is listed there. Users whose keys were rotated and used within the last 90 days pass, as do excepted ARNs and every user in an excepted account. Medium, ORG; scheduled scan of existing resources (pull mode), timing set by the platform; reports only (notify action, no change to the user or key). acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users with an access key last rotated 90 or more days ago, last used 90 or more days ago, or whose key has never been used are flagged. Users whose ARN is listed in the access-key exceptions file pass, as do users in an account listed in that file, users whose keys were rotated and used within the last 90 days, and users with no access keys. MEDIUM, ORG; scheduled scan, timing set by the platform; reports only (notifies). acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users' access keys are flagged when the key was last rotated 90 or more days ago, when it was last used 90 or more days ago, or when it has never been used, unless the key's ARN is listed in the `access-key-exceptions.csv` exceptions file or the user's account is listed in that file. Access keys rotated and used within the last 90 days, and keys listed as exceptions, pass; so do all keys in an exception-listed account. MEDIUM, ORG; runs on a scheduled pull scan, timing set by the platform; reports only (notify). acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users whose ARN is not on the access-key exception list, in accounts not on that list, and that have an access key last rotated 90 or more days ago, an access key last used 90 or more days ago, or an access key that has never been used, are flagged. IAM users with no access keys, and users whose access keys were all rotated and used within the last 90 days, pass, as do users on the exception list and every user in an account on it. MEDIUM, ORG; reports only, it notifies and changes nothing. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM access keys are flagged when their ARN is not on the access-key exceptions list and any of these holds: the key was last rotated 90 or more days ago, it was last used 90 or more days ago, or it has never been used. Keys in accounts on the exceptions list are not checked. Keys whose ARN is on the exceptions list, keys in exceptions-list accounts, and keys that were rotated less than 90 days ago and used less than 90 days ago pass. MEDIUM, ORG; scheduled pull scan, timing set by the platform; reports only, sends a notification and changes nothing. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM user access keys are flagged when their Arn is not on the access-key exception list, their account is not on the account exception list, and either the key was last rotated 90 or more days ago, the key was last used 90 or more days ago, or the key has never been used. Keys rotated and used within the last 90 days pass, as do keys on either exception list. MEDIUM, ORG; scheduled scan, timing set by the platform; notify action only, nothing is changed. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users with an access key that was last rotated 90 or more days ago, last used 90 or more days ago, or never used are flagged. IAM users whose ARN is on the access-key exceptions list pass, as do all users in accounts on that list, and so do users with no access key meeting those conditions. medium, ORG; scheduled scan, timing set by the platform; reports only, it notifies and changes nothing. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  },
+  {
+   "output": "- IAM users with an access key last rotated 90 or more days ago, last used 90 or more days ago, or never used are flagged. Users with no access key matching those conditions pass, and so do users whose ARN is in the `arn` column of `s3://acme-guardrail-config/access-key-exceptions.csv` or whose account is in its `account` column. The scan covers all IAM users, on a schedule the platform sets. Medium, ORG; scheduled pull, notify only, nothing is changed. acme:iam-access-keys-unused-90-days@4",
+   "fails": []
+  }
+ ]
+}

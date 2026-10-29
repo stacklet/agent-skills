@@ -1,0 +1,5 @@
+{
+  "kind": "guard",
+  "prompt": "write a python function that uploads a file to an existing s3 bucket with boto3 and retries on throttling errors",
+  "expected_output": "Skill is not consulted: no guardrail script runs (checked in the transcript), no scope file, no scope questions."
+}

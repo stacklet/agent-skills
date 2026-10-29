@@ -1,0 +1,12 @@
+{
+  "kind": "discriminating",
+  "prompt": "terraform for a small postgres RDS instance for our internal reporting tool",
+  "setup": "repo already has .stacklet/guardrails/scope.json excluding 'PCI-DSS AWS' (internal reporting tool, no card data)",
+  "start": {
+    "exclude": {
+      "collection": "PCI-DSS AWS",
+      "because": "internal reporting tool, no card data"
+    }
+  },
+  "expected_output": "Uses the recorded scope: does not ask about PCI-DSS again, does not rewrite scope.json; applies the all-accounts guardrails incl. tags, encryption, private."
+}

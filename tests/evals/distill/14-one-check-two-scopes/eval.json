@@ -1,0 +1,116 @@
+{
+ "about": "One check at two thresholds over two scopes (prod at least 7 days of backups, the rest at least 1): one bullet carrying both, or one per scope that names the other, so a reader of either learns both.",
+ "resource_type": "aws.rds",
+ "policies": [
+  {
+   "name": "acme:rds-backups-prod",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "rds-backups-prod",
+    "resource": "aws.rds",
+    "description": "Production keeps a week of backups.",
+    "filters": [
+     {
+      "tag:env": "prod"
+     },
+     {
+      "type": "value",
+      "key": "BackupRetentionPeriod",
+      "op": "lt",
+      "value": 7
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:rds-backups",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "rds-backups",
+    "resource": "aws.rds",
+    "description": "Every database keeps backups.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "tag:env",
+      "op": "ne",
+      "value": "prod"
+     },
+     {
+      "type": "value",
+      "key": "BackupRetentionPeriod",
+      "op": "lt",
+      "value": 1
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "joined-or-linked",
+   "policies": [
+    "acme:rds-backups-prod",
+    "acme:rds-backups"
+   ],
+   "says": [
+    "BackupRetentionPeriod",
+    "\\bprod",
+    "\\b7\\b",
+    "\\b1\\b"
+   ],
+   "linked": {
+    "acme:rds-backups-prod": [
+     "\\b1\\b|\\bone[- ]day|\\ba day\\b|\\b(any|some) backups?|backups? (enabled|turned on|at all)"
+    ],
+    "acme:rds-backups": [
+     "\\b7\\b|\\bseven\\b|\\ba week\\b"
+    ]
+   }
+  }
+ ],
+ "controls": [
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged when tagged `env: prod` (HIGH), and under 1 otherwise (MEDIUM). Prod instances keeping 7 days or more, and others keeping any backups, pass. ORG; reports only. acme:rds-backups-prod@1 acme:rds-backups@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances tagged `env: prod` with `BackupRetentionPeriod` under 7 are flagged; other instances only need 1 (acme:rds-backups@1). Prod instances keeping 7 or more pass. HIGH, ORG; reports only. acme:rds-backups-prod@1\n- RDS instances not tagged `env: prod` with `BackupRetentionPeriod` under 1 are flagged; prod instances need 7 instead. Others pass. MEDIUM, ORG; reports only. acme:rds-backups@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances tagged `env: prod` with `BackupRetentionPeriod` under 7 are flagged. Others pass. HIGH, ORG; reports only. acme:rds-backups-prod@1\n- RDS instances not tagged `env: prod` with `BackupRetentionPeriod` under 1 are flagged. Others pass. MEDIUM, ORG; reports only. acme:rds-backups@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- RDS instances tagged `env: prod` with `BackupRetentionPeriod` under 7 are flagged. Other instances pass this check; the other policy covers them. HIGH, ORG; reports only. acme:rds-backups-prod@1\n- RDS instances not tagged `env: prod` with `BackupRetentionPeriod` under 1 are flagged. Prod instances pass; the prod rule covers them. MEDIUM, ORG; reports only. acme:rds-backups@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- RDS instances tagged `env: prod` with `BackupRetentionPeriod` under 7 are flagged. Others pass (see acme:rds-backups@1). HIGH, ORG; reports only. acme:rds-backups-prod@1\n- RDS instances not tagged `env: prod` with `BackupRetentionPeriod` under 1 are flagged. Prod instances pass (see acme:rds-backups-prod@1). MEDIUM, ORG; reports only. acme:rds-backups@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- RDS instances tagged `env: prod` with `BackupRetentionPeriod` under 7 are flagged: anything from 0 to 6 days. HIGH, ORG; reports only. acme:rds-backups-prod@1\n- RDS instances not tagged `env: prod` with `BackupRetentionPeriod` under 1 are flagged; prod needs 7. MEDIUM, ORG; reports only. acme:rds-backups@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,97 @@
+{
+ "about": "One branch asks for a retention period both above 7776000 seconds (90 days) and below 5184000 (60 days), which no bucket has, so only buckets without a retention policy are ever flagged. Read as written, the dead branch would tell an agent to keep retention between 60 and 90 days. Every run on the collection it came from saw through it; this guards that.",
+ "resource_type": "gcp.bucket",
+ "policies": [
+  {
+   "name": "acme:bucket-retention-out-of-range",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "bucket-retention-out-of-range",
+    "resource": "gcp.bucket",
+    "filters": [
+     {
+      "or": [
+       {
+        "and": [
+         {
+          "type": "value",
+          "key": "retentionPolicy.retentionPeriod",
+          "op": "gt",
+          "value_type": "integer",
+          "value": 7776000
+         },
+         {
+          "type": "value",
+          "key": "retentionPolicy.retentionPeriod",
+          "op": "lt",
+          "value_type": "integer",
+          "value": 5184000
+         },
+         {
+          "retentionPolicy.isLocked": false
+         }
+        ]
+       },
+       {
+        "retentionPolicy": "empty"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "only-missing-retention",
+   "policies": [
+    "acme:bucket-retention-out-of-range"
+   ],
+   "says": [
+    "\\b(no|without|missing|empty|lacks?|lacking|absent)\\b[^.;]{0,40}\\bretention"
+   ],
+   "not": [
+    "(?:^|[.;]\\s*)(?:(?!\\b(?:pass\\w*|not|never)\\b|n't\\b)[^.;\\n])*\\boutside\\b[^.;]{0,40}\\b(60|90|5184000|7776000)\\b(?:(?!\\b(?:pass\\w*|not|never)\\b|n't\\b)[^.;\\n])*(?=[.;\\n]|$)",
+    "\\bbetween\\b[^.;]{0,30}\\b(60|5184000)\\b[^.;]{0,30}\\b(90|7776000)\\b[^.;]{0,60}\\b(pass|required|must)",
+    "\\bnot between\\b[^.;]{0,40}\\b(60|5184000|90|7776000)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Buckets with no `retentionPolicy` are flagged. The policy's other branch (a period above 7776000 and below 5184000 seconds) can never match. Buckets with any retention policy pass. LOW; scheduled scan; reports only. acme:bucket-retention-out-of-range@1",
+   "fails": []
+  },
+  {
+   "output": "- Buckets with no retention policy, or with an unlocked retention period outside 60 to 90 days, are flagged. LOW; scheduled scan; reports only. acme:bucket-retention-out-of-range@1",
+   "fails": [
+    "only-missing-retention"
+   ]
+  },
+  {
+   "output": "- Buckets with a retention period between 60 and 90 days pass; buckets with none are flagged. LOW; scheduled scan; reports only. acme:bucket-retention-out-of-range@1",
+   "fails": [
+    "only-missing-retention"
+   ]
+  },
+  {
+   "output": "- Buckets whose retention period is above 7776000 seconds and below 5184000 seconds are flagged. LOW; scheduled scan; reports only. acme:bucket-retention-out-of-range@1",
+   "fails": [
+    "only-missing-retention"
+   ]
+  },
+  {
+   "output": "- Buckets with no retention policy are flagged, as are buckets whose retention period is not between 60 and 90 days. LOW; scheduled scan; reports only. acme:bucket-retention-out-of-range@1",
+   "fails": [
+    "only-missing-retention"
+   ]
+  },
+  {
+   "output": "- GCP buckets with no retention policy configured (`retentionPolicy` absent) are flagged. Buckets with a retention policy pass, whatever its period or lock state, because the period branch (`retentionPeriod` greater than 7776000 seconds, which is 90 days, and less than 5184000 seconds, which is 60 days, and not locked) contradicts itself and can never match, so buckets with a retention period outside 60 to 90 days are not flagged either. LOW, no compliance framework; reports only. acme:bucket-retention-out-of-range@1",
+   "fails": []
+  }
+ ]
+}

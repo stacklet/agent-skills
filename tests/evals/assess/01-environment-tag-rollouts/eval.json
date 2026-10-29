@@ -1,0 +1,11 @@
+{
+  "shape": "A large estate over AWS, Azure and GCP with 22 orgs: collections rolled out by environment tags (in several spellings and casings), an OU opt-out, two dozen empty collections, and a test collection bound to every production GCP project.",
+  "expect": {
+    "collections": {
+      "test_notify_policy_collection": [
+        "ask",
+        "applies"
+      ]
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+ "about": "A cloudtrail policy that sleeps 600 seconds (Custodian's `delay`, for eventual consistency) before looking: the bullet says it runs after the call, and after the delay.",
+ "resource_type": "aws.s3",
+ "policies": [
+  {
+   "name": "acme:s3-versioning-on-create",
+   "version": 1,
+   "severity": "medium",
+   "mode": "cloudtrail",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-versioning-on-create",
+    "resource": "aws.s3",
+    "description": "New buckets keep object versions.",
+    "mode": {
+     "type": "cloudtrail",
+     "events": [
+      "CreateBucket"
+     ],
+     "delay": 600
+    },
+    "filters": [
+     {
+      "type": "value",
+      "key": "Versioning.Status",
+      "op": "ne",
+      "value": "Enabled"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "says-the-delay",
+   "policies": [
+    "acme:s3-versioning-on-create"
+   ],
+   "says": [
+    "CreateBucket",
+    "\\b(600|10|ten)[- ](seconds?|minutes?)[^.;]*\\b(after|following)\\b[^.;]*CreateBucket|CreateBucket`?[^.;]*\\b(600|10|ten)[- ](seconds?|minutes?)\\b[^.;]*\\b(later|after|delay\\w*|wait\\w*)\\b|\\b(delay\\w*|wait\\w*|later)\\b[^.;]*\\b(600|10|ten)[- ](seconds?|minutes?)[^.;]*CreateBucket|CreateBucket`?[^.;]*\\b(delay\\w*|wait\\w*)\\b[^.;]*\\b(600|10|ten)[- ](seconds?|minutes?)"
+   ],
+   "not": [
+    "(?<!not )(?<!never )(?<!n't )(?<!nor )\\b(block(s|ed)?|prevent(s|ed)?|den(y|ies|ied)|reject(s|ed)?|refuse[sd]?)\\b",
+    "\\bevery (600|10|ten)[- ](seconds?|minutes?)|(?<!not )(?<!not a )\\bscheduled (scan|run)"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged 600 seconds after `CreateBucket`, so a bucket created without versioning is found about 10 minutes later. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning-on-create@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged just after `CreateBucket`. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning-on-create@1",
+   "fails": [
+    "says-the-delay"
+   ]
+  },
+  {
+   "output": "- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged on a scheduled scan every 600 seconds; `CreateBucket` is not involved. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning-on-create@1",
+   "fails": [
+    "says-the-delay"
+   ]
+  },
+  {
+   "output": "- S3 buckets whose `Versioning.Status` isn't `Enabled` are blocked 600 seconds after `CreateBucket`. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning-on-create@1",
+   "fails": [
+    "says-the-delay"
+   ]
+  }
+ ]
+}

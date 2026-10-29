@@ -1,0 +1,10 @@
+{
+  "kind": "guard",
+  "prompt": "grow the batch worker's data volume to 500GB",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Sets size = 500 and changes nothing else. Leaves the gp2-to-gp3 switch alone (gp3's default throughput is below gp2's at 500GB, so it is not a free fix). Does not rework the instance (IMDSv2, tags) unasked."
+}

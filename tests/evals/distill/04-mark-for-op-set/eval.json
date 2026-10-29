@@ -1,0 +1,129 @@
+{
+ "about": "A mark-for-op set (mark untagged instances, stop what is marked after 3 days, unmark what gets tagged in time): different filters, one constraint, so one bullet.",
+ "resource_type": "aws.ec2",
+ "policies": [
+  {
+   "name": "acme:ec2-owner-mark",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ec2-owner-mark",
+    "resource": "aws.ec2",
+    "description": "Instances need an owner.",
+    "filters": [
+     {
+      "tag:Owner": "absent"
+     },
+     {
+      "tag:c7n_status": "absent"
+     }
+    ],
+    "actions": [
+     {
+      "type": "mark-for-op",
+      "tag": "c7n_status",
+      "op": "stop",
+      "days": 3
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:ec2-owner-stop",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ec2-owner-stop",
+    "resource": "aws.ec2",
+    "description": "Stop instances marked for having no owner.",
+    "filters": [
+     {
+      "type": "marked-for-op",
+      "tag": "c7n_status",
+      "op": "stop"
+     }
+    ],
+    "actions": [
+     "stop"
+    ]
+   }
+  },
+  {
+   "name": "acme:ec2-owner-unmark",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ec2-owner-unmark",
+    "resource": "aws.ec2",
+    "description": "Unmark instances that now have an owner.",
+    "filters": [
+     {
+      "tag:Owner": "present"
+     },
+     {
+      "tag:c7n_status": "present"
+     }
+    ],
+    "actions": [
+     {
+      "type": "remove-tag",
+      "tags": [
+       "c7n_status"
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "one-bullet",
+   "together": true,
+   "policies": [
+    "acme:ec2-owner-mark",
+    "acme:ec2-owner-stop",
+    "acme:ec2-owner-unmark"
+   ],
+   "says": [
+    "Owner",
+    "\\b(3|three)[- ]days?\\b|72 hours",
+    "\\bstop",
+    "in time|before|remov\\w*|unmark|clear\\w*"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EC2 instances without an `Owner` tag are flagged and marked to be stopped in 3 days; tagging one in time removes the mark. Instances with `Owner` pass. MEDIUM, ORG; marks, then stops what is still marked. acme:ec2-owner-mark@1 acme:ec2-owner-stop@1 acme:ec2-owner-unmark@1",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances with neither an `Owner` tag nor a `c7n_status` tag are flagged. Instances with either tag pass. Medium, ORG: flagged instances are marked for stop with 3 days' notice, and instances still marked are stopped. Low, ORG: instances that have both `Owner` and `c7n_status` have `c7n_status` removed. acme:ec2-owner-mark@1, acme:ec2-owner-stop@1, acme:ec2-owner-unmark@1",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances without an `Owner` tag are marked to be stopped in 3 days. Tagged ones pass. MEDIUM, ORG. acme:ec2-owner-mark@1\n- EC2 instances marked for stopping are stopped. Others pass. MEDIUM, ORG; stops them. acme:ec2-owner-stop@1\n- EC2 instances tagged `Owner` after marking are unmarked. LOW, ORG. acme:ec2-owner-unmark@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- EC2 instances without an `Owner` tag are flagged and stopped (three policies). Tagged instances pass. MEDIUM, ORG; stops them. acme:ec2-owner-mark@1 acme:ec2-owner-stop@1 acme:ec2-owner-unmark@1",
+   "fails": [
+    "one-bullet"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,95 @@
+{
+ "about": "An event-mode policy reacts just after the API call it lists: the bullet says when it runs, and never that creation is blocked or denied.",
+ "resource_type": "aws.rds",
+ "policies": [
+  {
+   "name": "acme:rds-public-on-create",
+   "version": 1,
+   "severity": "critical",
+   "mode": "cloudtrail",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "rds-public-on-create",
+    "resource": "aws.rds",
+    "description": "Prevent public databases.",
+    "mode": {
+     "type": "cloudtrail",
+     "events": [
+      "CreateDBInstance"
+     ]
+    },
+    "filters": [
+     {
+      "PubliclyAccessible": true
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "after-not-before",
+   "policies": [
+    "acme:rds-public-on-create"
+   ],
+   "says": [
+    "PubliclyAccessible",
+    "(?<!not )(?<!never )\\b(after|following|once|on|upon|when)\\b[^.;]*CreateDBInstance|CreateDBInstance`?[^.;]*\\b(calls?|events?)\\b"
+   ],
+   "not": [
+    "(?<!not )(?<!never )(?<!n't )(?<!nor )\\b(block(s|ed)?|prevent(s|ed)?|den(y|ies|ied)|reject(s|ed)?|refuse[sd]?)\\b",
+    "\\b(cannot|can't|won't|will not) be created\\b|\\bstopped (at|before)\\b|CreateDBInstance`?( calls?)? (fails?|errors?)\\b",
+    "\\bbefore\\b[^.;]*\\b(creat\\w*|launch\\w*|exists?)\\b",
+    "\\b(nightly|daily|weekly|hourly|scheduled|periodic) scans?\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- RDS instances with `PubliclyAccessible` true are flagged just after `CreateDBInstance`, so the instance exists by then. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances with `PubliclyAccessible` true are flagged. Instances with `PubliclyAccessible` false pass. CRITICAL, ORG; runs shortly after `CreateDBInstance` calls, not on a schedule; reports only, so it does not block or change the instance. acme:rds-public-on-create@1",
+   "fails": []
+  },
+  {
+   "output": "- Creating an RDS instance with `PubliclyAccessible` true is blocked. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": [
+    "after-not-before"
+   ]
+  },
+  {
+   "output": "- RDS instances are flagged when `PubliclyAccessible` is true. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": [
+    "after-not-before"
+   ]
+  },
+  {
+   "output": "- RDS instances with `PubliclyAccessible` true are flagged: creation is stopped at `CreateDBInstance`. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": [
+    "after-not-before"
+   ]
+  },
+  {
+   "output": "- RDS instances with `PubliclyAccessible` true cannot be created: `CreateDBInstance` fails. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": [
+    "after-not-before"
+   ]
+  },
+  {
+   "output": "- RDS instances with `PubliclyAccessible` true are flagged: the policy checks `CreateDBInstance` calls before the instance is created. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": [
+    "after-not-before"
+   ]
+  },
+  {
+   "output": "- RDS instances with `PubliclyAccessible` true are flagged by a nightly scan, not on `CreateDBInstance`. Private instances pass. CRITICAL, ORG; reports only. acme:rds-public-on-create@1",
+   "fails": [
+    "after-not-before"
+   ]
+  }
+ ]
+}

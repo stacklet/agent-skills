@@ -1,0 +1,93 @@
+{
+ "about": "A region condition on S3 (global) only avoids scanning the same buckets from every region: ignored, so no bullet says the rule is about us-east-1 (ENG-9302).",
+ "resource_type": "aws.s3",
+ "policies": [
+  {
+   "name": "acme:s3-encryption",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-encryption",
+    "resource": "aws.s3",
+    "description": "Buckets must have default encryption.",
+    "conditions": [
+     {
+      "type": "value",
+      "key": "region",
+      "value": "us-east-1"
+     }
+    ],
+    "filters": [
+     {
+      "type": "bucket-encryption",
+      "state": false
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "region-ignored",
+   "policies": [
+    "acme:s3-encryption"
+   ],
+   "says": [
+    "encrypt"
+   ],
+   "not": [
+    "\\bin `?us-east-1|\\bus-east-1`? (only|buckets)|\\bonly\\b[^.;]*\\bus-east-1",
+    "\\bonly (in|within) (one|a|the) region|in (that|this|its) region",
+    "\\(`?us-east-1`?( region)?\\)|\\bin (the )?`?us-east-1`? region\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- S3 buckets without default encryption are flagged. Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets in any region without default encryption are flagged. Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets in us-east-1 without default encryption are flagged. Other buckets pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- S3 buckets without default encryption are flagged, in every region (the policy's `us-east-1` condition only keeps the same buckets from being scanned twice). Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without default encryption are flagged, but only those the us-east-1 scan sees. Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- S3 buckets without default encryption are flagged, but only in one region. Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- S3 buckets (us-east-1 region) without default encryption are flagged. Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": [
+    "region-ignored"
+   ]
+  },
+  {
+   "output": "- S3 buckets created in the us-east-1 region without default encryption are flagged. Buckets with default encryption pass. HIGH, ORG; reports only. acme:s3-encryption@1",
+   "fails": [
+    "region-ignored"
+   ]
+  }
+ ]
+}

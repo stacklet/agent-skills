@@ -1,0 +1,227 @@
+{
+ "about": "Ingress from anywhere on all ports, on ten TCP ports or on two UDP ports, flagged and removed. Ports 69 and 123 are in both lists: a bullet must not leave them as UDP only, which would tell an agent that TCP 123 open to the world passes (one run of five did).",
+ "resource_type": "aws.security-group",
+ "policies": [
+  {
+   "name": "acme:sg-risky-ports-notify",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "sg-risky-ports-notify",
+    "resource": "aws.security-group",
+    "filters": [
+     {
+      "or": [
+       {
+        "type": "ingress",
+        "FromPort": 0,
+        "ToPort": 65535,
+        "Cidr": {
+         "value": "0.0.0.0/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         21,
+         22,
+         23,
+         69,
+         123,
+         1433,
+         1521,
+         3306,
+         3389,
+         5432
+        ],
+        "IpProtocol": "tcp",
+        "Cidr": {
+         "value": "0.0.0.0/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         69,
+         123
+        ],
+        "IpProtocol": "udp",
+        "Cidr": {
+         "value": "0.0.0.0/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "FromPort": 0,
+        "ToPort": 65535,
+        "CidrV6": {
+         "value": "::/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         21,
+         22,
+         23,
+         69,
+         123,
+         1433,
+         1521,
+         3306,
+         3389,
+         5432
+        ],
+        "IpProtocol": "tcp",
+        "CidrV6": {
+         "value": "::/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         69,
+         123
+        ],
+        "IpProtocol": "udp",
+        "CidrV6": {
+         "value": "::/0"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:sg-risky-ports-remove",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "sg-risky-ports-remove",
+    "resource": "aws.security-group",
+    "filters": [
+     {
+      "or": [
+       {
+        "type": "ingress",
+        "FromPort": 0,
+        "ToPort": 65535,
+        "Cidr": {
+         "value": "0.0.0.0/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         21,
+         22,
+         23,
+         69,
+         123,
+         1433,
+         1521,
+         3306,
+         3389,
+         5432
+        ],
+        "IpProtocol": "tcp",
+        "Cidr": {
+         "value": "0.0.0.0/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         69,
+         123
+        ],
+        "IpProtocol": "udp",
+        "Cidr": {
+         "value": "0.0.0.0/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "FromPort": 0,
+        "ToPort": 65535,
+        "CidrV6": {
+         "value": "::/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         21,
+         22,
+         23,
+         69,
+         123,
+         1433,
+         1521,
+         3306,
+         3389,
+         5432
+        ],
+        "IpProtocol": "tcp",
+        "CidrV6": {
+         "value": "::/0"
+        }
+       },
+       {
+        "type": "ingress",
+        "Ports": [
+         69,
+         123
+        ],
+        "IpProtocol": "udp",
+        "CidrV6": {
+         "value": "::/0"
+        }
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "remove-permissions",
+      "ingress": "matched"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "tcp-69-and-123",
+   "policies": [
+    "acme:sg-risky-ports-notify",
+    "acme:sg-risky-ports-remove"
+   ],
+   "says": [
+    "\\bTCP\\b(?:(?!\\bUDP\\b)[^.;])*\\b69\\b|\\b(TCP (or|and|/) UDP|UDP (or|and|/) TCP|both protocols|either protocol)\\b[^.;]*\\b69\\b",
+    "\\bTCP\\b(?:(?!\\bUDP\\b)[^.;])*\\b123\\b|\\b(TCP (or|and|/) UDP|UDP (or|and|/) TCP|both protocols|either protocol)\\b[^.;]*\\b123\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Security groups with ingress from `0.0.0.0/0` or `::/0` on all ports, on TCP 21, 22, 23, 69, 123, 1433, 1521, 3306, 3389 or 5432, or on UDP 69 or 123, are flagged. Groups without such a rule pass. HIGH; one policy reports only, the other removes the matching rules. acme:sg-risky-ports-notify@1, acme:sg-risky-ports-remove@1",
+   "fails": []
+  },
+  {
+   "output": "- Security groups with ingress from anywhere on all ports, on TCP 21, 22, 23, 1433, 1521, 3306, 3389 or 5432, or on TCP or UDP port 69 or 123, are flagged. Others pass. HIGH; one reports, the other removes the rules. acme:sg-risky-ports-notify@1, acme:sg-risky-ports-remove@1",
+   "fails": []
+  },
+  {
+   "output": "- Security groups with ingress from anywhere on all ports, on TCP ports 21, 22, 23, 1433, 1521, 3306, 3389 or 5432, or on UDP ports 69 and 123, are flagged. Others pass. HIGH; one reports, the other removes the rules. acme:sg-risky-ports-notify@1, acme:sg-risky-ports-remove@1",
+   "fails": [
+    "tcp-69-and-123"
+   ]
+  }
+ ]
+}

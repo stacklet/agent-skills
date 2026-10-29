@@ -1,0 +1,116 @@
+{
+ "about": "One policy flags backup retention under 7 days, another over 7: only exactly 7 passes both, which the bullets must say.",
+ "resource_type": "aws.rds",
+ "policies": [
+  {
+   "name": "acme:rds-backup-minimum",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "rds-backup-minimum",
+    "resource": "aws.rds",
+    "description": "Keep at least a week of backups.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "BackupRetentionPeriod",
+      "op": "lt",
+      "value": 7
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:rds-backup-cost",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "COST"
+   ],
+   "source": {
+    "name": "rds-backup-cost",
+    "resource": "aws.rds",
+    "description": "Long backup retention costs money.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "BackupRetentionPeriod",
+      "op": "gt",
+      "value": 7
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "says-they-pull-apart",
+   "policies": [
+    "acme:rds-backup-minimum",
+    "acme:rds-backup-cost"
+   ],
+   "says": [
+    "BackupRetentionPeriod",
+    "\\b7\\b",
+    "oppos\\w*|at odds|pulls? against|passes both|conflict|tension|only (exactly )?`?7`? (days? )?pass|7 is the only|exactly `?7|even though[^.;]*\\b(cost|other|second|REF|above|over|below|under)\\b[^.;]*\\bflag\\w*|(below|under|above|over|more than|less than) `?7`?[^.]*\\b(also|too)\\b[^.]*flag|polic\\w* (above|below) flags"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged (HIGH, ORG) and those over 7 are flagged too (LOW, COST): the two pull in opposite directions, so only exactly 7 passes both. Reports only. acme:rds-backup-minimum@1 acme:rds-backup-cost@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` below 7 are flagged, and this pulls against the retention-cost rule below. Instances with 7 or more pass. HIGH, ORG; reports only. acme:rds-backup-minimum@1\n- RDS instances with `BackupRetentionPeriod` above 7 are flagged. Instances with 7 or less pass. LOW, COST; reports only. acme:rds-backup-cost@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` below 7 days are flagged. Instances with 7 days or more pass. high, ORG; reports only. This opposes acme:rds-backup-cost@1, which flags retention above 7 days. acme:rds-backup-minimum@1\n- RDS instances with `BackupRetentionPeriod` above 7 days are flagged. Instances with 7 days or less pass. low, COST; reports only. acme:rds-backup-cost@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS DB instances with `BackupRetentionPeriod` below 7 days are flagged. Instances with 7 or more pass, so a retention of 8 or more is not flagged here even though the cost policy below flags it. high, ORG; reports only. acme:rds-backup-minimum@1\n- RDS DB instances with `BackupRetentionPeriod` above 7 days are flagged. Instances with 7 or fewer pass. low, COST; reports only. acme:rds-backup-cost@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged. Longer retention passes. HIGH, ORG; reports only. acme:rds-backup-minimum@1\n- RDS instances with `BackupRetentionPeriod` over 7 are flagged. Shorter retention passes. LOW, COST; reports only. acme:rds-backup-cost@1",
+   "fails": [
+    "says-they-pull-apart"
+   ]
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged. Longer retention passes. HIGH, ORG; pull-mode scan, reports only. acme:rds-backup-minimum@1\n- RDS instances with `BackupRetentionPeriod` over 7 are flagged. Shorter retention passes. LOW, COST; pull-mode scan, reports only. acme:rds-backup-cost@1",
+   "fails": [
+    "says-they-pull-apart"
+   ]
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged (HIGH, ORG), and so are those over 7 (LOW, COST). Both report only. acme:rds-backup-minimum@1 acme:rds-backup-cost@1",
+   "fails": [
+    "says-they-pull-apart"
+   ]
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged, even though the default is lower. Longer retention passes. HIGH, ORG; reports only. acme:rds-backup-minimum@1\n- RDS instances with `BackupRetentionPeriod` over 7 are flagged. Shorter retention passes. LOW, COST; reports only. acme:rds-backup-cost@1",
+   "fails": [
+    "says-they-pull-apart"
+   ]
+  },
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 7 are flagged, even though AWS defaults flag nothing. Longer retention passes. HIGH, ORG; reports only. acme:rds-backup-minimum@1\n- RDS instances with `BackupRetentionPeriod` over 7 are flagged. Shorter retention passes. LOW, COST; reports only. acme:rds-backup-cost@1",
+   "fails": [
+    "says-they-pull-apart"
+   ]
+  },
+  {
+   "output": "- RDS DB instances with `BackupRetentionPeriod` below 7 days, including 0 (automated backups off), are flagged. Instances at 7 days or more pass this policy, and the flagged state is at odds with the cost policy below, which flags anything above 7. HIGH, ORG; pull scan on the platform's schedule; reports only. acme:rds-backup-minimum@1\n- RDS DB instances with `BackupRetentionPeriod` above 7 days are flagged as a cost concern. Instances at 7 days or fewer pass this policy, and the flagged state is at odds with the minimum-retention policy above, which flags anything below 7. LOW, COST; pull scan on the platform's schedule; reports only. acme:rds-backup-cost@1",
+   "fails": []
+  }
+ ]
+}

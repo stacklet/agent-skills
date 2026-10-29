@@ -1,0 +1,3 @@
+{
+  "shape": "An Azure-only estate grouped by OU path in two orgs, with dashboard sets bound to the empty AWS and GCP providers."
+}

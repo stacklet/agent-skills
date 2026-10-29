@@ -1,0 +1,127 @@
+{
+ "about": "One check (gp2 volumes flagged) over three environments at three severities, by tag: one bullet, or one per environment, each naming the others' severities.",
+ "resource_type": "aws.ebs",
+ "policies": [
+  {
+   "name": "acme:ebs-gp3-prod",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "COST"
+   ],
+   "source": {
+    "name": "ebs-gp3-prod",
+    "resource": "aws.ebs",
+    "description": "Production volumes use gp3.",
+    "filters": [
+     {
+      "tag:env": "prod"
+     },
+     {
+      "VolumeType": "gp2"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:ebs-gp3-stage",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "COST"
+   ],
+   "source": {
+    "name": "ebs-gp3-stage",
+    "resource": "aws.ebs",
+    "description": "Staging volumes use gp3.",
+    "filters": [
+     {
+      "tag:env": "stage"
+     },
+     {
+      "VolumeType": "gp2"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:ebs-gp3-dev",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "COST"
+   ],
+   "source": {
+    "name": "ebs-gp3-dev",
+    "resource": "aws.ebs",
+    "description": "Development volumes use gp3.",
+    "filters": [
+     {
+      "tag:env": "dev"
+     },
+     {
+      "VolumeType": "gp2"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "joined-or-linked",
+   "policies": [
+    "acme:ebs-gp3-prod",
+    "acme:ebs-gp3-stage",
+    "acme:ebs-gp3-dev"
+   ],
+   "says": [
+    "VolumeType|gp2",
+    "\\bprod",
+    "\\bstag",
+    "\\bdev"
+   ],
+   "linked": {
+    "acme:ebs-gp3-prod": [
+     "\\b(stag(e|ing)|dev(elopment)?)\\b[^.;]*\\b(medium|low|lower|severit\\w*)\\b|\\b(medium|low|lower)\\b[^.;]*\\b(stag(e|ing)|dev(elopment)?)\\b"
+    ],
+    "acme:ebs-gp3-stage": [
+     "\\b(prod\\w*|dev(elopment)?)\\b[^.;]*\\b(high|higher|low|lower|severit\\w*)\\b|\\b(high|higher|low|lower)\\b[^.;]*\\b(prod\\w*|dev(elopment)?)\\b"
+    ],
+    "acme:ebs-gp3-dev": [
+     "\\b(prod\\w*|stag(e|ing))\\b[^.;]*\\b(high|higher|medium|severit\\w*)\\b|\\b(high|higher|medium)\\b[^.;]*\\b(prod\\w*|stag(e|ing))\\b"
+    ]
+   }
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EBS volumes with `VolumeType` `gp2` are flagged: HIGH when tagged `env: prod`, MEDIUM for `stage`, LOW for `dev`. Volumes of other types pass, as do gp2 volumes with no such tag. COST; reports only. acme:ebs-gp3-prod@1 acme:ebs-gp3-stage@1 acme:ebs-gp3-dev@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes tagged `env: prod` with `VolumeType` `gp2` are flagged (HIGH; stage and dev volumes are flagged at lower severities). Other types pass. COST; reports only. acme:ebs-gp3-prod@1\n- EBS volumes tagged `env: stage` with `VolumeType` `gp2` are flagged (MEDIUM; HIGH in prod, LOW in dev). Other types pass. COST; reports only. acme:ebs-gp3-stage@1\n- EBS volumes tagged `env: dev` with `VolumeType` `gp2` are flagged (LOW; higher in stage and prod). Other types pass. COST; reports only. acme:ebs-gp3-dev@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes tagged `env: prod` with `VolumeType` `gp2` are flagged. Other types pass. HIGH, COST; reports only. acme:ebs-gp3-prod@1\n- EBS volumes tagged `env: stage` with `VolumeType` `gp2` are flagged. Other types pass. MEDIUM, COST; reports only. acme:ebs-gp3-stage@1\n- EBS volumes tagged `env: dev` with `VolumeType` `gp2` are flagged. Other types pass. LOW, COST; reports only. acme:ebs-gp3-dev@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- EBS volumes tagged `env: prod` with `VolumeType` `gp2` are flagged. Stage and dev volumes pass this check. HIGH, COST; reports only. acme:ebs-gp3-prod@1\n- EBS volumes tagged `env: stage` with `VolumeType` `gp2` are flagged. Prod and dev volumes pass this check. MEDIUM, COST; reports only. acme:ebs-gp3-stage@1\n- EBS volumes tagged `env: dev` with `VolumeType` `gp2` are flagged. Stage and prod volumes pass this check. LOW, COST; reports only. acme:ebs-gp3-dev@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- EBS volumes tagged `env: prod` with `VolumeType` `gp2` are flagged; stage and dev volumes are not flagged by this policy. HIGH, COST; reports only. acme:ebs-gp3-prod@1\n- EBS volumes tagged `env: stage` with `VolumeType` `gp2` are flagged; prod and dev volumes are not flagged by this policy. MEDIUM, COST; reports only. acme:ebs-gp3-stage@1\n- EBS volumes tagged `env: dev` with `VolumeType` `gp2` are flagged; prod and stage volumes are not flagged by this policy. LOW, COST; reports only. acme:ebs-gp3-dev@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  }
+ ]
+}

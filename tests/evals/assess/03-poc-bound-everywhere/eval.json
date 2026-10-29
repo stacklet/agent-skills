@@ -1,0 +1,13 @@
+{
+  "shape": "Almost entirely hand-picked groups, plus a proof-of-value and a proof-of-concept collection bound to every Azure subscription: by reach they apply, whatever their names.",
+  "expect": {
+    "collections": {
+      "Alder POV Collection": [
+        "applies"
+      ],
+      "POC": [
+        "applies"
+      ]
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# Which deployment a Stacklet MCP server is for: run it against each one available (SKILL.md step 1).
+# The console URL names the deployment, and the cache: pass it as every script's DEPLOYMENT argument.
+{ platform { urls { console } } }

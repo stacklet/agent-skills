@@ -1,0 +1,286 @@
+{
+ "about": "One check, buckets without an enabled lifecycle rule aborting incomplete multipart uploads, in two policies: one reports it in every account, the other (a `conditions` entry: `account_id` `in` two inline account ids) adds such a rule (7 days) in those two accounts only. Their conditions differ, so they are two bundle groups, joined by the prompt as one check over two scopes. Whichever bullet cites the fix says it is only in those accounts, and whichever cites the report says it reports. Both policies' `query` (`augment-keys: [Lifecycle]`) only fetches the bucket's lifecycle configuration for the filters to read: it selects nothing. A bucket tagged `finops-exempt` passes. The shape comes from a collection in the wild, where the inform and remediate variants of each check sit in different collections.",
+ "resource_type": "aws.s3",
+ "policies": [
+  {
+   "name": "acme:s3-abort-incomplete-uploads-inform",
+   "version": 3,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "FINOPS"
+   ],
+   "source": {
+    "name": "s3-abort-incomplete-uploads-inform",
+    "resource": "aws.s3",
+    "query": [
+     {
+      "augment-keys": [
+       "Lifecycle"
+      ]
+     }
+    ],
+    "filters": [
+     {
+      "not": [
+       {
+        "type": "value",
+        "key": "tag:finops-exempt",
+        "value": "present"
+       }
+      ]
+     },
+     {
+      "or": [
+       {
+        "type": "value",
+        "key": "Lifecycle",
+        "value": "absent"
+       },
+       {
+        "type": "value",
+        "key": "Lifecycle.Rules",
+        "value": "absent"
+       },
+       {
+        "type": "value",
+        "key": "Lifecycle.Rules",
+        "value": "empty"
+       },
+       {
+        "and": [
+         {
+          "type": "value",
+          "key": "Lifecycle.Rules",
+          "value": "not-null"
+         },
+         {
+          "type": "value",
+          "key": "Lifecycle.Rules[?Status == 'Enabled' && AbortIncompleteMultipartUpload] | length(@)",
+          "value": 0,
+          "op": "eq"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-abort-incomplete-uploads-remediate",
+   "version": 3,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "FINOPS"
+   ],
+   "source": {
+    "name": "s3-abort-incomplete-uploads-remediate",
+    "resource": "aws.s3",
+    "query": [
+     {
+      "augment-keys": [
+       "Lifecycle"
+      ]
+     }
+    ],
+    "conditions": [
+     {
+      "type": "value",
+      "key": "account_id",
+      "op": "in",
+      "value": [
+       "210987654321",
+       "345678901234"
+      ]
+     }
+    ],
+    "filters": [
+     {
+      "not": [
+       {
+        "type": "value",
+        "key": "tag:finops-exempt",
+        "value": "present"
+       }
+      ]
+     },
+     {
+      "or": [
+       {
+        "type": "value",
+        "key": "Lifecycle",
+        "value": "absent"
+       },
+       {
+        "type": "value",
+        "key": "Lifecycle.Rules",
+        "value": "absent"
+       },
+       {
+        "type": "value",
+        "key": "Lifecycle.Rules",
+        "value": "empty"
+       },
+       {
+        "and": [
+         {
+          "type": "value",
+          "key": "Lifecycle.Rules",
+          "value": "not-null"
+         },
+         {
+          "type": "value",
+          "key": "Lifecycle.Rules[?Status == 'Enabled' && AbortIncompleteMultipartUpload] | length(@)",
+          "value": 0,
+          "op": "eq"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "configure-lifecycle",
+      "rules": [
+       {
+        "ID": "acme-abort-incomplete-mpu",
+        "Status": "Enabled",
+        "Filter": {
+         "Prefix": ""
+        },
+        "AbortIncompleteMultipartUpload": {
+         "DaysAfterInitiation": 7
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "fix-only-in-listed-accounts",
+   "policies": [
+    "acme:s3-abort-incomplete-uploads-inform",
+    "acme:s3-abort-incomplete-uploads-remediate"
+   ],
+   "linked": {
+    "acme:s3-abort-incomplete-uploads-remediate": [
+     "210987654321|345678901234|\\b(two|2|listed|specific|named|certain)\\b[^.;]{0,30}\\baccounts?\\b|\\baccounts? (listed|named)\\b"
+    ],
+    "acme:s3-abort-incomplete-uploads-inform": [
+     "\\breport"
+    ]
+   },
+   "says": [],
+   "not": [
+    "\\b(every|all|any) accounts?\\b((?!\\b(while|but|only|whereas|which|policy)\\b|210987654321|345678901234)[^.;]){0,60}(?<!-)\\b(adds?|configures?|sets?|applies|applied|fix(es|ed)?)",
+    "\\b(adds?|configures?|sets?|fix(es)?|remediates?)\\b[^.;]{0,80}\\b(in|across) (every|all|any) accounts?\\b"
+   ]
+  },
+  {
+   "id": "the-rule",
+   "policies": [
+    "acme:s3-abort-incomplete-uploads-inform",
+    "acme:s3-abort-incomplete-uploads-remediate"
+   ],
+   "says": [
+    "AbortIncompleteMultipartUpload|incomplete multipart",
+    "\\b7 days\\b|\\bseven days\\b|\\b7-day\\b|\\b7 \\(days?\\)|DaysAfterInitiation`?:?\\s+(of )?7\\b",
+    "\\benabled\\b"
+   ],
+   "not": []
+  },
+  {
+   "id": "exempt-tag",
+   "policies": [
+    "acme:s3-abort-incomplete-uploads-inform",
+    "acme:s3-abort-incomplete-uploads-remediate"
+   ],
+   "says": [
+    "finops-exempt"
+   ],
+   "not": [
+    "\\bwithout\\b[^.;]{0,20}`?finops-exempt`?[^.;]{0,30}\\bpass"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- S3 buckets without an enabled lifecycle rule using `AbortIncompleteMultipartUpload` (no `Lifecycle`, no rules, or no enabled rule with it) are flagged, unless tagged `finops-exempt`. Buckets with such an enabled rule pass. HIGH, FINOPS; scheduled scan; in every account it reports only, and in accounts 210987654321 and 345678901234 it adds an enabled rule aborting incomplete multipart uploads after 7 days. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with no enabled lifecycle rule that aborts incomplete multipart uploads are flagged, unless tagged `finops-exempt`; buckets with one pass. HIGH, FINOPS; scheduled scan; reports only. In the two listed accounts acme:s3-abort-incomplete-uploads-remediate@3 adds that rule (7 days). acme:s3-abort-incomplete-uploads-inform@3\n- In accounts 210987654321 and 345678901234, S3 buckets with no enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged, unless tagged `finops-exempt`; buckets with one pass. HIGH, FINOPS; scheduled scan; adds an enabled rule aborting incomplete multipart uploads after 7 days. Elsewhere acme:s3-abort-incomplete-uploads-inform@3 only reports them. acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with no enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged, unless tagged `finops-exempt`; buckets with one pass. HIGH, FINOPS; scheduled scan; in every account it adds an enabled rule aborting incomplete multipart uploads after 7 days, and reports them. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": [
+    "fix-only-in-listed-accounts"
+   ]
+  },
+  {
+   "output": "- S3 buckets with no enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged in every account, unless tagged `finops-exempt`; buckets with one pass. HIGH, FINOPS; scheduled scan; reports them, and adds an enabled rule aborting incomplete multipart uploads after 7 days in all accounts. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": [
+    "fix-only-in-listed-accounts"
+   ]
+  },
+  {
+   "output": "- S3 buckets with no enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged, unless tagged `finops-exempt`; buckets with one pass. HIGH, FINOPS; scheduled scan. acme:s3-abort-incomplete-uploads-inform@3\n- In accounts 210987654321 and 345678901234, S3 buckets with no enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged, unless tagged `finops-exempt`; buckets with one pass. HIGH, FINOPS; scheduled scan; adds an enabled rule aborting incomplete multipart uploads after 7 days. acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": [
+    "fix-only-in-listed-accounts"
+   ]
+  },
+  {
+   "output": "- S3 buckets without an enabled lifecycle rule are flagged, unless tagged `finops-exempt`. HIGH, FINOPS; scheduled scan; in every account it reports only, and in accounts 210987654321 and 345678901234 it adds a lifecycle rule. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": [
+    "the-rule"
+   ]
+  },
+  {
+   "output": "- S3 buckets without an enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged. Buckets with such a rule pass. HIGH, FINOPS; scheduled scan; in every account it reports only, and in accounts 210987654321 and 345678901234 it adds an enabled rule aborting incomplete multipart uploads after 7 days. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": [
+    "exempt-tag"
+   ]
+  },
+  {
+   "output": "- S3 buckets without an enabled `AbortIncompleteMultipartUpload` lifecycle rule are flagged; buckets without the `finops-exempt` tag pass. HIGH, FINOPS; scheduled scan; in every account it reports only, and in accounts 210987654321 and 345678901234 it adds an enabled rule aborting incomplete multipart uploads after 7 days. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": [
+    "exempt-tag"
+   ]
+  },
+  {
+   "output": "- S3 buckets with no enabled lifecycle rule that sets `AbortIncompleteMultipartUpload` are flagged, including buckets with no lifecycle configuration, no rules, or only disabled rules or rules without that setting. Buckets carrying a `finops-exempt` tag (any value) pass, as do buckets with any enabled rule that sets `AbortIncompleteMultipartUpload`, whatever its prefix or `DaysAfterInitiation`. HIGH, FINOPS; scheduled scan, timing set by the platform; the inform policy only reports in every account, while the remediate policy adds an enabled rule with ID `acme-abort-incomplete-mpu`, empty prefix (whole bucket) and `AbortIncompleteMultipartUpload.DaysAfterInitiation` 7 days, but only in accounts 210987654321 and 345678901234, so flagged buckets elsewhere are reported only. acme:s3-abort-incomplete-uploads-inform@3 and acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with no `finops-exempt` tag and no Enabled lifecycle rule that sets `AbortIncompleteMultipartUpload` are flagged, including buckets with no lifecycle configuration, buckets whose lifecycle configuration has no rules, and buckets whose rules include none that is Enabled with `AbortIncompleteMultipartUpload`. Buckets carrying the `finops-exempt` tag (any value) pass, as do buckets with at least one Enabled lifecycle rule that sets `AbortIncompleteMultipartUpload`, whatever its `DaysAfterInitiation`. HIGH, FINOPS; scheduled pull scan of existing buckets, with timing set by the platform; the inform policy reports every flagged bucket in all accounts and changes nothing, while the remediate policy, which runs only in accounts 210987654321 and 345678901234, adds an Enabled lifecycle rule `acme-abort-incomplete-mpu` with an empty prefix (the whole bucket) that aborts incomplete multipart uploads 7 days after initiation (`DaysAfterInitiation` 7). acme:s3-abort-incomplete-uploads-inform@3 and acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without a `finops-exempt` tag (any value) are flagged when they have no lifecycle configuration, no lifecycle rules, an empty rule list, or no enabled rule that sets `AbortIncompleteMultipartUpload`, whatever its `DaysAfterInitiation`. Buckets carrying `finops-exempt` pass, as do buckets with at least one enabled lifecycle rule that sets `AbortIncompleteMultipartUpload`. HIGH, FINOPS; scheduled pull scan; the inform policy only reports in every account, and the remediate policy, which runs only in accounts 210987654321 and 345678901234, adds or sets an enabled rule with ID `acme-abort-incomplete-mpu`, an empty prefix covering the whole bucket, and `AbortIncompleteMultipartUpload.DaysAfterInitiation` 7 days. In accounts outside that list, flagged buckets are reported but not changed. acme:s3-abort-incomplete-uploads-inform@3, acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without an `Enabled` lifecycle rule that sets `AbortIncompleteMultipartUpload` are flagged, including buckets with no lifecycle configuration, no `Rules`, or an empty `Rules` list. Buckets tagged `finops-exempt` (any value) are never flagged, and buckets with at least one `Enabled` rule that sets `AbortIncompleteMultipartUpload` pass, whatever `DaysAfterInitiation` it uses. high, FINOPS; scheduled scan, timing set by the platform; the inform policy only reports these buckets in every account, and in accounts 210987654321 and 345678901234 the remediate policy also adds an `Enabled` rule with ID `acme-abort-incomplete-mpu`, prefix `\"\"` (the whole bucket), and `AbortIncompleteMultipartUpload.DaysAfterInitiation` 7 days. acme:s3-abort-incomplete-uploads-inform@3 acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without a `finops-exempt` tag (any value) that have no lifecycle configuration, or whose lifecycle configuration has no enabled rule with `AbortIncompleteMultipartUpload` set, are flagged. Buckets tagged `finops-exempt` pass, as do buckets with at least one `Status` Enabled lifecycle rule that sets `AbortIncompleteMultipartUpload`. The scan runs on a schedule set by the platform. The inform policy reports these buckets in every account, and the remediate policy, which applies only in accounts 210987654321 and 345678901234, configures an enabled lifecycle rule `acme-abort-incomplete-mpu` with an empty `Filter.Prefix` (whole bucket) and `AbortIncompleteMultipartUpload.DaysAfterInitiation` 7 days. HIGH severity, FINOPS framework; the inform policy reports only, and the remediate policy changes the bucket's lifecycle configuration in those two accounts. acme:s3-abort-incomplete-uploads-inform@3 and acme:s3-abort-incomplete-uploads-remediate@3.",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without a `finops-exempt` tag (any value) whose lifecycle configuration has no enabled rule with `AbortIncompleteMultipartUpload` are flagged, including buckets with no lifecycle configuration at all. Buckets with a `finops-exempt` tag pass, whatever its value, as do buckets with at least one enabled lifecycle rule that aborts incomplete multipart uploads, whatever its prefix or `DaysAfterInitiation`. HIGH, FINOPS; reports only in all accounts, and in accounts 210987654321 and 345678901234 also sets lifecycle rule `acme-abort-incomplete-mpu` (`Status` `Enabled`, `Filter.Prefix` empty so it covers the whole bucket, `AbortIncompleteMultipartUpload.DaysAfterInitiation` 7 days), so incomplete multipart uploads are aborted 7 days after initiation; flagged buckets outside those two accounts are only reported. acme:s3-abort-incomplete-uploads-inform@3, acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets without a `finops-exempt` tag key whose lifecycle configuration has no Enabled rule carrying `AbortIncompleteMultipartUpload`, or that have no lifecycle configuration or an empty `Rules` list, are flagged. Buckets with the `finops-exempt` tag key present (any value) pass, as do buckets with at least one Enabled lifecycle rule carrying `AbortIncompleteMultipartUpload`, whatever its prefix or `DaysAfterInitiation` value. HIGH, FINOPS; scheduled pull scan. In buckets in accounts 210987654321 and 345678901234, a flagged bucket gets a lifecycle rule with ID `acme-abort-incomplete-mpu`, Status Enabled, Prefix \"\" (the whole bucket), and `AbortIncompleteMultipartUpload.DaysAfterInitiation` of 7 (days), applied by configure-lifecycle; in every other account, flagged buckets are only reported. acme:s3-abort-incomplete-uploads-inform@3, acme:s3-abort-incomplete-uploads-remediate@3",
+   "fails": []
+  }
+ ]
+}

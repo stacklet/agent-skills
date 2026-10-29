@@ -1,0 +1,317 @@
+{
+ "about": "Tags a policy writes for its own bookkeeping, as collections in the wild use them: a reminder that flags instances missing required tags only while its own `review-due` tag is absent or past (then sets it a week ahead), and a clean-up that marks new instances missing an owner or cost tags with `gov-notified` and `gov-cleanup` (notify now, terminate in 3 days) and skips what already carries them. What is flagged is the missing tags; the policies' own tags only pace them. The bullets say so and that the tags are the policies' own, to leave alone, never that setting one makes an instance pass.",
+ "resource_type": "aws.ec2",
+ "policies": [
+  {
+   "name": "acme:ec2-tag-review-reminder",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "ec2-tag-review-reminder",
+    "resource": "aws.ec2",
+    "filters": [
+     {
+      "or": [
+       {
+        "tag:Name": "absent"
+       },
+       {
+        "tag:acme:env": "absent"
+       },
+       {
+        "tag:acme:owner": "absent"
+       },
+       {
+        "tag:acme:cost-centre": "absent"
+       },
+       {
+        "tag:acme:app-id": "absent"
+       }
+      ]
+     },
+     {
+      "or": [
+       {
+        "tag:review-due": "absent"
+       },
+       {
+        "type": "value",
+        "key": "tag:review-due",
+        "value_type": "expiration",
+        "op": "lte",
+        "value": 0
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "tag",
+      "key": "tag-check",
+      "value": "false"
+     },
+     {
+      "type": "tag",
+      "key": "review-due",
+      "value": "tag review@{now:%Y/%m/%d+7d}"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:ec2-new-untagged-cleanup",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "ec2-new-untagged-cleanup",
+    "resource": "aws.ec2",
+    "filters": [
+     {
+      "type": "value",
+      "key": "LaunchTime",
+      "value_type": "age",
+      "value": 1,
+      "op": "less-than"
+     },
+     {
+      "or": [
+       {
+        "not": [
+         {
+          "or": [
+           {
+            "type": "value",
+            "key": "tag:Owner",
+            "value": "present"
+           },
+           {
+            "type": "value",
+            "key": "tag:owner",
+            "value": "present"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "and": [
+         {
+          "or": [
+           {
+            "type": "value",
+            "key": "tag:Owner",
+            "value": "present"
+           },
+           {
+            "type": "value",
+            "key": "tag:owner",
+            "value": "present"
+           }
+          ]
+         },
+         {
+          "or": [
+           {
+            "and": [
+             {
+              "type": "value",
+              "key": "tag:CostCentre",
+              "value": "absent"
+             },
+             {
+              "type": "value",
+              "key": "tag:cost_centre",
+              "value": "absent"
+             }
+            ]
+           },
+           {
+            "and": [
+             {
+              "type": "value",
+              "key": "tag:Application",
+              "value": "absent"
+             },
+             {
+              "type": "value",
+              "key": "tag:application",
+              "value": "absent"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "value",
+      "key": "tag:gov-notified",
+      "value": "absent"
+     },
+     {
+      "type": "value",
+      "key": "tag:gov-cleanup",
+      "value": "absent"
+     }
+    ],
+    "actions": [
+     {
+      "type": "mark-for-op",
+      "op": "notify",
+      "tag": "gov-notified",
+      "days": 0
+     },
+     {
+      "type": "mark-for-op",
+      "op": "terminate",
+      "tag": "gov-cleanup",
+      "days": 3
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "reminder-flags-missing-tags",
+   "policies": [
+    "acme:ec2-tag-review-reminder"
+   ],
+   "says": [
+    "\\b(missing|without|lacks?|lacking|absent)\\b[^.\\n]{0,160}\\b(tags?|owner|cost|env)|\\bany of\\b[^.\\n]{0,160}\\b(absent|missing)\\b"
+   ]
+  },
+  {
+   "id": "review-due-is-no-pass",
+   "policies": [
+    "acme:ec2-tag-review-reminder"
+   ],
+   "not": [
+    "\\b(instances?|resources?|they|it)\\b[^.;\\n]{0,40}\\b(with|whose|carrying|holding|that (?:has|have|carr(?:y|ies)))\\b[^.;,\\n]{0,60}\\breview-due\\b[^.;\\n]{0,80}\\b(pass(?:es)?|are(?: not|n't) flagged|is(?: not|n't) flagged|(?:are|is) (?:skipped|exempt)|comply|compliant)\\b",
+    "\\b(pass(?:es)?|are(?: not|n't) flagged|is(?: not|n't) flagged|(?:are|is) (?:skipped|exempt))\\b[^.;\\n]{0,40}\\b(when|if|while|once|until|as long as)\\b[^.;\\n]{0,80}\\breview-due\\b",
+    "(?<!n't )(?<!not )(?<!never )\\b(set|setting|add|adding)\\b[^.;\\n]{0,40}\\breview-due\\b[^.;\\n]{0,80}\\b(to pass|passes|avoid|exempt|to comply|stops? (?:it|them|the) (?:being )?flag)",
+    "\\breview-due\\b[^.;\\n]{0,80}\\b(keeps?|stops?|spares?|exempts?|saves?)\\b[^.;\\n]{0,40}\\b(from being flagged|being flagged|from the reminder|flagged|flagging)"
+   ]
+  },
+  {
+   "id": "review-due-is-the-policys-own",
+   "policies": [
+    "acme:ec2-tag-review-reminder"
+   ],
+   "says": [
+    "\\breview-due\\b[^\\n]{0,200}(?:(its|the polic(?:y|ies)'s?|polic(?:y|ies)'s?|their) own\\b|\\bbookkeeping\\b|\\bleave (?:it|them|those|that|the)\\b[^.\\n]{0,40}\\balone\\b|\\b(?:don't|do not|never|shouldn't|should not)\\b[^.\\n]{0,20}\\b(?:set|touch|change|write|add|edit|remove|manage)\\b|\\bset (?:and \\w+ )?by the polic(?:y|ies)(?: itself)?\\b|\\bnot (?:yours|for you|for your code)\\b|\\breserved for\\b)|(?:(its|the polic(?:y|ies)'s?|polic(?:y|ies)'s?|their) own\\b|\\bbookkeeping\\b|\\bleave (?:it|them|those|that|the)\\b[^.\\n]{0,40}\\balone\\b|\\b(?:don't|do not|never|shouldn't|should not)\\b[^.\\n]{0,20}\\b(?:set|touch|change|write|add|edit|remove|manage)\\b|\\bset (?:and \\w+ )?by the polic(?:y|ies)(?: itself)?\\b|\\bnot (?:yours|for you|for your code)\\b|\\breserved for\\b)[^\\n]{0,120}\\breview-due\\b"
+   ]
+  },
+  {
+   "id": "cleanup-terminates-in-3-days",
+   "policies": [
+    "acme:ec2-new-untagged-cleanup"
+   ],
+   "says": [
+    "\\bterminat\\w*",
+    "\\b(3|three)[ -]days?\\b"
+   ]
+  },
+  {
+   "id": "cleanup-tags-are-no-pass",
+   "policies": [
+    "acme:ec2-new-untagged-cleanup"
+   ],
+   "not": [
+    "\\b(instances?|resources?|they|it)\\b[^.;\\n]{0,40}\\b(with|whose|carrying|holding|already tagged|that (?:has|have|carr(?:y|ies)))\\b[^.;,\\n]{0,60}\\bgov-(notified|cleanup)\\b[^.;\\n]{0,80}\\b(pass(?:es)?|are(?: not|n't) flagged|is(?: not|n't) flagged|(?:are|is) (?:skipped|exempt)|comply|compliant)\\b",
+    "\\b(pass(?:es)?|are(?: not|n't) flagged|is(?: not|n't) flagged|(?:are|is) (?:skipped|exempt))\\b[^.;\\n]{0,40}\\b(when|if|while|once|until|as long as)\\b[^.;\\n]{0,80}\\bgov-(notified|cleanup)\\b",
+    "(?<!n't )(?<!not )(?<!never )\\b(set|setting|add|adding)\\b[^.;\\n]{0,40}\\bgov-(notified|cleanup)\\b[^.;\\n]{0,80}\\b(to pass|passes|avoid|exempt|to comply|stops? (?:it|them|the) (?:being )?flag)",
+    "\\bgov-(notified|cleanup)\\b[^.;\\n]{0,80}\\b(keeps?|stops?|spares?|exempts?|saves?)\\b[^.;\\n]{0,40}\\b(from being flagged|being flagged|from the reminder|flagged|flagging)"
+   ]
+  },
+  {
+   "id": "cleanup-tags-are-the-policys-own",
+   "policies": [
+    "acme:ec2-new-untagged-cleanup"
+   ],
+   "says": [
+    "\\bgov-(?:notified\\b|cleanup\\b|`)[^\\n]{0,200}(?:(its|the polic(?:y|ies)'s?|polic(?:y|ies)'s?|their) own\\b|\\bbookkeeping\\b|\\bleave (?:it|them|those|that|the)\\b[^.\\n]{0,40}\\balone\\b|\\b(?:don't|do not|never|shouldn't|should not)\\b[^.\\n]{0,20}\\b(?:set|touch|change|write|add|edit|remove|manage)\\b|\\bset (?:and \\w+ )?by the polic(?:y|ies)(?: itself)?\\b|\\bnot (?:yours|for you|for your code)\\b|\\breserved for\\b)|(?:(its|the polic(?:y|ies)'s?|polic(?:y|ies)'s?|their) own\\b|\\bbookkeeping\\b|\\bleave (?:it|them|those|that|the)\\b[^.\\n]{0,40}\\balone\\b|\\b(?:don't|do not|never|shouldn't|should not)\\b[^.\\n]{0,20}\\b(?:set|touch|change|write|add|edit|remove|manage)\\b|\\bset (?:and \\w+ )?by the polic(?:y|ies)(?: itself)?\\b|\\bnot (?:yours|for you|for your code)\\b|\\breserved for\\b)[^\\n]{0,120}\\bgov-(?:notified\\b|cleanup\\b|`)"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EC2 instances missing any of the `Name`, `acme:env`, `acme:owner`, `acme:cost-centre` or `acme:app-id` tags are flagged on a scheduled scan; the policy tags them `tag-check=false` and sets its own `review-due` tag a week ahead, which only spaces its reminders: leave `review-due` alone. Instances carrying all five tags pass. No severity; scheduled scans; tags the resource. acme:ec2-tag-review-reminder@1\n- EC2 instances launched in the last day with no `Owner` tag, or an owner but no cost centre or application tag, are flagged on a scheduled scan, marked with the policy's own `gov-notified` tag for notification at once and `gov-cleanup` for termination in 3 days; those tags are its bookkeeping, not yours to set. Instances with an owner and a cost centre and application tag pass. No severity; scheduled scans; schedules a notification and a termination. acme:ec2-new-untagged-cleanup@1",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances missing any of the `Name`, `acme:env`, `acme:owner`, `acme:cost-centre` or `acme:app-id` tags are flagged, unless their `review-due` tag holds a future date. Instances with a future `review-due` tag pass, and so do instances with all five tags. No severity; scheduled scans; tags the resource. acme:ec2-tag-review-reminder@1\n- EC2 instances launched in the last day with no `Owner` tag, or an owner but no cost centre or application tag, are flagged unless already tagged `gov-notified` or `gov-cleanup`. Instances already tagged `gov-notified` pass. No severity; scheduled scans; schedules a notification and terminates them after 3 days. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "review-due-is-no-pass",
+    "review-due-is-the-policys-own",
+    "cleanup-tags-are-no-pass",
+    "cleanup-tags-are-the-policys-own"
+   ]
+  },
+  {
+   "output": "- EC2 instances are flagged on a scan and tagged for review. No severity; scheduled scans; tags the resource. acme:ec2-tag-review-reminder@1\n- EC2 instances launched in the last day with no `Owner` tag are flagged and scheduled for clean-up later, and pass when their `gov-cleanup` tag is set. No severity; scheduled scans. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "reminder-flags-missing-tags",
+    "review-due-is-the-policys-own",
+    "cleanup-terminates-in-3-days",
+    "cleanup-tags-are-no-pass",
+    "cleanup-tags-are-the-policys-own"
+   ]
+  },
+  {
+   "output": "- EC2 instances missing any of the `Name`, `acme:env`, `acme:owner`, `acme:cost-centre` or `acme:app-id` tags are flagged, and setting `review-due` to a future date avoids the reminder. No severity; scheduled scans. acme:ec2-tag-review-reminder@1\n- EC2 instances launched in the last day with no `Owner` tag are flagged; don't set `gov-notified` or `gov-cleanup` yourself: the policy uses them to mark instances for notification and termination in 3 days. No severity; scheduled scans. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "review-due-is-no-pass",
+    "review-due-is-the-policys-own"
+   ]
+  },
+  {
+   "output": "- EC2 instances missing any of the `Name`, `acme:env`, `acme:owner`, `acme:cost-centre` or `acme:app-id` tags are flagged on a scan, and pass while their `review-due` tag holds a future date. No severity; scheduled scans. acme:ec2-tag-review-reminder@1\n- EC2 instances launched in the last day with no `Owner` tag are flagged, and adding `gov-cleanup` yourself avoids the termination in 3 days. No severity; scheduled scans. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "review-due-is-no-pass",
+    "review-due-is-the-policys-own",
+    "cleanup-tags-are-no-pass",
+    "cleanup-tags-are-the-policys-own"
+   ]
+  },
+  {
+   "output": "- EC2 instances missing any of the `Name`, `acme:env`, `acme:owner`, `acme:cost-centre` or `acme:app-id` tags are flagged on a scan; the scan tags them `tag-check=false` and moves `review-due` a week ahead. Instances carrying all five tags pass. No severity; scheduled scans. acme:ec2-tag-review-reminder@1\n- EC2 instances launched in the last day with no `Owner` tag, or with an owner but no cost centre or application tag, are marked `gov-notified` and `gov-cleanup`, notified at once and terminated after 3 days. Instances with an owner and a cost centre and application tag pass. No severity; scheduled scans. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "review-due-is-the-policys-own",
+    "cleanup-tags-are-the-policys-own"
+   ]
+  },
+  {
+   "output": "- EC2 instances are flagged when their `review-due` tag is absent or its date is 0 days or less away, and they lack any of `Name`, `acme:app-id`, `acme:cost-centre`, `acme:env` or `acme:owner`. Instances carrying all five of those tags pass, and the `review-due` value never makes an instance pass. No severity or compliance framework is set. The policy runs on a scheduled pull scan, timed by the platform. It sets `tag-check` to `false` and sets `review-due` to 7 days after the scan, which is the policy's own reminder date to leave alone. acme:ec2-tag-review-reminder@1\n## Runtime-only (may change resources outside your control)\n- EC2 instances launched less than 1 day ago that have neither `gov-notified` nor `gov-cleanup` tags, and that either have no `Owner`/`owner` tag, or have an owner tag but neither an `Application`/`application` tag nor a `CostCentre`/`cost_centre` tag, are flagged. Instances launched 1 day or more ago pass, as do instances with an owner tag plus an application or cost-centre tag. No severity or compliance framework is set. The policy runs on a scheduled pull scan, timed by the platform. It tags flagged instances `gov-notified` (op `notify`, 0 days) and `gov-cleanup` (op `terminate`, 3 days). These are the policy's own marks to leave alone, and the policy only records them, it does not terminate. acme:ec2-new-untagged-cleanup@1",
+   "fails": []
+  },
+  {
+   "output": "- Running EC2 instances missing an `Owner` or `CostCenter` tag are flagged weekly; a future `review-due` date keeps an instance from being flagged. LOW; notifies the owner and sets `review-due` a week ahead. acme:ec2-tag-review-reminder@1\n- New EC2 instances missing an `Owner` or `CostCenter` tag are marked `gov-notified` and `gov-cleanup`, notified now and terminated in 3 days; `gov-notified` and `gov-cleanup` are the policy's own tags, to leave alone. HIGH. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "review-due-is-no-pass",
+    "review-due-is-the-policys-own"
+   ]
+  },
+  {
+   "output": "- Running EC2 instances missing an `Owner` or `CostCenter` tag are flagged; `review-due` is the policy's own tag, to leave alone. LOW; notifies the owner. acme:ec2-tag-review-reminder@1\n- New EC2 instances missing an `Owner` or `CostCenter` tag are terminated in 3 days; carrying `gov-notified` keeps an instance from being flagged. HIGH. acme:ec2-new-untagged-cleanup@1",
+   "fails": [
+    "cleanup-tags-are-no-pass",
+    "cleanup-tags-are-the-policys-own"
+   ]
+  },
+  {
+   "output": "- EC2 instances launched less than 1 day ago (`LaunchTime` age under 1 day), without `gov-cleanup` or `gov-notified` tags, that either have no `Owner` or `owner` tag or have one but lack both an `Application` or `application` tag and a `CostCentre` or `cost_centre` tag, are flagged. Instances older than 1 day pass, and so do instances with an owner tag plus at least one application tag and at least one cost-centre tag (either spelling of each). The `gov-notified` and `gov-cleanup` tags are this policy's own bookkeeping, to leave alone. No severity, no compliance framework; scheduled scan, timing set by the platform; marks each flagged instance with `gov-notified` for a notify operation at 0 days and with `gov-cleanup` for a terminate operation in 3 days, and does not terminate anything itself. acme:ec2-new-untagged-cleanup@1\n- EC2 instances with any of `Name`, `acme:app-id`, `acme:cost-centre`, `acme:env` or `acme:owner` absent, and with `review-due` either absent or holding a date that has been reached (0 days or fewer remaining), are flagged. Instances with all five of `Name`, `acme:app-id`, `acme:cost-centre`, `acme:env` and `acme:owner` present pass. The `review-due` tag is this policy's own reminder date and `tag-check` is set by its actions, so leave both alone. No severity, no compliance framework; scheduled scan, timing set by the platform; sets `tag-check` to `false` and sets `review-due` to 7 days after the run date, and does not notify, stop or delete anything. acme:ec2-tag-review-reminder@1",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances missing any of `Name`, `acme:app-id`, `acme:cost-centre`, `acme:env` or `acme:owner` are flagged when their `review-due` tag is absent or its date is 0 days away or already past. Instances carrying all five of those tags pass, and an instance with only the unprefixed `Owner`, `Application` and `CostCentre` keys is flagged here though acme:ec2-new-untagged-cleanup@1 passes it. No severity set, no compliance framework; a scheduled pull scan, timing set by the platform; the actions only tag, setting `tag-check` to `false` and `review-due` to a date 7 days from the run, both this policy's own bookkeeping to leave alone. acme:ec2-tag-review-reminder@1\n## Runtime-only (may change resources outside your control)\n- EC2 instances launched less than 1 day ago, with no `gov-cleanup` or `gov-notified` tag, and with either no `Owner`/`owner` tag or an owner tag but neither `Application`/`application` nor `CostCentre`/`cost_centre`, are flagged. Instances launched 1 day or more ago pass, as do instances carrying an owner tag plus an application tag and a cost-centre tag (either casing). No severity set, no compliance framework; a scheduled pull scan, timing set by the platform; the actions mark only: `gov-notified` is set to op `notify` with 0 days, and `gov-cleanup` is set to op `terminate` with 3 days, so a flagged instance is marked for termination 3 days after the run that marks it. This policy does not terminate instances itself, and the two `gov-` tags are its own bookkeeping to leave alone. acme:ec2-new-untagged-cleanup@1",
+   "fails": []
+  }
+ ]
+}

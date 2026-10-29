@@ -1,0 +1,281 @@
+{
+ "about": "A countdown built from tags rather than mark-for-op: one policy tags old snapshots 0, the next steps the tag to 7, then 14, then 21, and the last deletes what still carries 21 past 183 days. Different filters, one constraint: one bullet, saying the snapshots are deleted and when.",
+ "resource_type": "aws.ebs-snapshot",
+ "policies": [
+  {
+   "name": "acme:snapshot-retire-0",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "snapshot-retire-0",
+    "resource": "aws.ebs-snapshot",
+    "filters": [
+     {
+      "type": "age",
+      "days": 155,
+      "op": "gt"
+     },
+     {
+      "type": "value",
+      "key": "SnapshotId",
+      "op": "not-in",
+      "value_from": {
+       "url": "s3://example-config/exclusions.csv",
+       "format": "csv2dict",
+       "expr": "SnapshotId"
+      }
+     },
+     {
+      "not": [
+       {
+        "or": [
+         {
+          "tag:acme:retire-stage": "0"
+         },
+         {
+          "tag:acme:retire-stage": "7"
+         },
+         {
+          "tag:acme:retire-stage": "14"
+         },
+         {
+          "tag:acme:retire-stage": "21"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "skip-ami-snapshots",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "tag",
+      "tags": {
+       "acme:retire-stage": "0"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:snapshot-retire-1",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "snapshot-retire-1",
+    "resource": "aws.ebs-snapshot",
+    "filters": [
+     {
+      "type": "age",
+      "days": 162,
+      "op": "gt"
+     },
+     {
+      "type": "value",
+      "key": "SnapshotId",
+      "op": "not-in",
+      "value_from": {
+       "url": "s3://example-config/exclusions.csv",
+       "format": "csv2dict",
+       "expr": "SnapshotId"
+      }
+     },
+     {
+      "tag:acme:retire-stage": "0"
+     },
+     {
+      "type": "skip-ami-snapshots",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "tag",
+      "tags": {
+       "acme:retire-stage": "7"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:snapshot-retire-2",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "snapshot-retire-2",
+    "resource": "aws.ebs-snapshot",
+    "filters": [
+     {
+      "type": "age",
+      "days": 169,
+      "op": "gt"
+     },
+     {
+      "type": "value",
+      "key": "SnapshotId",
+      "op": "not-in",
+      "value_from": {
+       "url": "s3://example-config/exclusions.csv",
+       "format": "csv2dict",
+       "expr": "SnapshotId"
+      }
+     },
+     {
+      "tag:acme:retire-stage": "7"
+     },
+     {
+      "type": "skip-ami-snapshots",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "tag",
+      "tags": {
+       "acme:retire-stage": "14"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:snapshot-retire-3",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "snapshot-retire-3",
+    "resource": "aws.ebs-snapshot",
+    "filters": [
+     {
+      "type": "age",
+      "days": 176,
+      "op": "gt"
+     },
+     {
+      "type": "value",
+      "key": "SnapshotId",
+      "op": "not-in",
+      "value_from": {
+       "url": "s3://example-config/exclusions.csv",
+       "format": "csv2dict",
+       "expr": "SnapshotId"
+      }
+     },
+     {
+      "tag:acme:retire-stage": "14"
+     },
+     {
+      "type": "skip-ami-snapshots",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "tag",
+      "tags": {
+       "acme:retire-stage": "21"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:snapshot-retire-4",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "snapshot-retire-4",
+    "resource": "aws.ebs-snapshot",
+    "filters": [
+     {
+      "type": "age",
+      "days": 183,
+      "op": "gt"
+     },
+     {
+      "type": "value",
+      "key": "SnapshotId",
+      "op": "not-in",
+      "value_from": {
+       "url": "s3://example-config/exclusions.csv",
+       "format": "csv2dict",
+       "expr": "SnapshotId"
+      }
+     },
+     {
+      "tag:acme:retire-stage": "21"
+     },
+     {
+      "type": "skip-ami-snapshots",
+      "value": true
+     }
+    ],
+    "actions": [
+     "delete",
+     {
+      "type": "webhook",
+      "url": "https://hooks.example.com/governance",
+      "batch": false,
+      "body": "{account:account_id, resource:resource.id, policy:policy.name}"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "one-countdown",
+   "policies": [
+    "acme:snapshot-retire-0",
+    "acme:snapshot-retire-1",
+    "acme:snapshot-retire-2",
+    "acme:snapshot-retire-3",
+    "acme:snapshot-retire-4"
+   ],
+   "together": true
+  },
+  {
+   "id": "deleted-at-the-end",
+   "policies": [
+    "acme:snapshot-retire-4"
+   ],
+   "says": [
+    "\\b(deletes?|deleted|deleting|deletion)\\b",
+    "\\b183\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- EBS snapshots older than 155 days, not AMI-backed and not on the exclusion list, start a countdown: tagged `acme:retire-stage` 0, stepped to 7 past 162 days, 14 past 169, 21 past 176, and deleted past 183 days, each deletion posted to a webhook. No severity; scheduled scans. acme:snapshot-retire-0@1, acme:snapshot-retire-1@1, acme:snapshot-retire-2@1, acme:snapshot-retire-3@1, acme:snapshot-retire-4@1",
+   "fails": []
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- EBS snapshots at stage 0 are re-tagged or removed on a scan. acme:snapshot-retire-0@1\n- EBS snapshots at stage 1 are re-tagged or removed on a scan. acme:snapshot-retire-1@1\n- EBS snapshots at stage 2 are re-tagged or removed on a scan. acme:snapshot-retire-2@1\n- EBS snapshots at stage 3 are re-tagged or removed on a scan. acme:snapshot-retire-3@1\n- EBS snapshots at stage 4 are re-tagged or removed on a scan. acme:snapshot-retire-4@1",
+   "fails": [
+    "one-countdown",
+    "deleted-at-the-end"
+   ]
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- Old EBS snapshots are tagged through stages 0, 7, 14 and 21 and finally deleted. No severity; scheduled scans. acme:snapshot-retire-0@1, acme:snapshot-retire-1@1, acme:snapshot-retire-2@1, acme:snapshot-retire-3@1, acme:snapshot-retire-4@1",
+   "fails": [
+    "deleted-at-the-end"
+   ]
+  }
+ ]
+}

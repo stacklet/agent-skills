@@ -1,0 +1,5 @@
+{
+  "kind": "discriminating",
+  "prompt": "write a python script using boto3 that creates a bucket for each customer onboarded (name passed in) and a small postgres rds instance for their reporting db. region eu-west-1.",
+  "expected_output": "create_bucket call is followed by/contains KMS (aws:kms) encryption config, public access block, cost-center + data-classification tags; create_db_instance has StorageEncrypted=True, PubliclyAccessible=False, tags."
+}

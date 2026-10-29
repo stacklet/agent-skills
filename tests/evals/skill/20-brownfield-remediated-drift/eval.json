@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "prompt": "add a lifecycle rule to the public docs bucket so objects expire after 90 days",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Adds the lifecycle rule and leaves the bucket's public reads alone: the bucket policy, block_public_policy and restrict_public_buckets (making the bucket private would break the storefront). Turning the ACL flags on, to match what the platform set, is fine if the reply says so: public reads go through the bucket policy. Tells the user plainly that a guardrail with an action (set-public-block) acts on this bucket: the platform has probably already turned the block back on, so public reads may already fail, and every apply, this one included, turns it off again until the platform redoes it. Says how to settle it: exempt the bucket on the platform, or make the code match."
+}

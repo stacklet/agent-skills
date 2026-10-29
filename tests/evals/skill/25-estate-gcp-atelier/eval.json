@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "add a terraform GCS bucket for render outputs to this repo.",
+  "setup": "repo contains fixture/estate-atelier-repo/providers.tf, whose provider names project atelier-render-prod; the cache holds that project's lookup: it is in the atelier.example org, whose collections apply only there",
+  "start": {
+    "copy": "estate-atelier-repo"
+  },
+  "expected_output": "Finds the project in the provider block and records it; the atelier.example collections then apply through it without asking which org: labels atelier-team and cost-code, versioning enabled, uniform bucket-level access."
+}

@@ -1,0 +1,76 @@
+{
+ "about": "A region condition on RDS (regional) is a real narrowing, as good as a filter: the bullet says it applies in eu-west-1.",
+ "resource_type": "aws.rds",
+ "policies": [
+  {
+   "name": "acme:rds-multi-az-eu",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "rds-multi-az-eu",
+    "resource": "aws.rds",
+    "description": "Databases must be Multi-AZ.",
+    "conditions": [
+     {
+      "type": "value",
+      "key": "region",
+      "value": "eu-west-1"
+     }
+    ],
+    "filters": [
+     {
+      "MultiAZ": false
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "region-kept",
+   "policies": [
+    "acme:rds-multi-az-eu"
+   ],
+   "says": [
+    "eu-west-1",
+    "Multi[- ]?AZ"
+   ],
+   "not": [
+    "Multi[- ]?AZ`?\\s+(set to |of )?`?(true|enabled)`?\\s+(are|is) flagged",
+    "\\b(outside|other than|except|not in)\\b[^.;]{0,20}`?eu-west-1`?[^.;]{0,60}\\bflagged\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- RDS instances in eu-west-1 with `MultiAZ` false are flagged. Multi-AZ instances, and any outside eu-west-1, pass. HIGH, ORG; reports only. acme:rds-multi-az-eu@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances in eu-west-1 with Multi-AZ disabled are flagged. Multi-AZ instances, and any outside eu-west-1, pass. HIGH, ORG; reports only. acme:rds-multi-az-eu@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances with `MultiAZ` false are flagged. Multi-AZ instances pass. HIGH, ORG; reports only. acme:rds-multi-az-eu@1",
+   "fails": [
+    "region-kept"
+   ]
+  },
+  {
+   "output": "- RDS instances in eu-west-1 with `MultiAZ` true are flagged. Single-AZ instances pass. HIGH, ORG; reports only. acme:rds-multi-az-eu@1",
+   "fails": [
+    "region-kept"
+   ]
+  },
+  {
+   "output": "- RDS instances outside eu-west-1 with `MultiAZ` false are flagged. Multi-AZ instances pass. HIGH, ORG; reports only. acme:rds-multi-az-eu@1",
+   "fails": [
+    "region-kept"
+   ]
+  }
+ ]
+}

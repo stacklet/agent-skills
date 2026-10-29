@@ -1,0 +1,89 @@
+{
+ "about": "A utilisation policy only matters at runtime (under the runtime-only heading); a tag policy is set at creation (not under it).",
+ "resource_type": "aws.ec2",
+ "policies": [
+  {
+   "name": "acme:ec2-idle",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "COST"
+   ],
+   "source": {
+    "name": "ec2-idle",
+    "resource": "aws.ec2",
+    "description": "Find idle instances.",
+    "filters": [
+     {
+      "type": "metrics",
+      "name": "CPUUtilization",
+      "days": 14,
+      "value": 5,
+      "op": "less-than"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:ec2-cost-center",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ec2-cost-center",
+    "resource": "aws.ec2",
+    "description": "Instances carry a cost center.",
+    "filters": [
+     {
+      "tag:CostCenter": "absent"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "utilisation-is-runtime",
+   "policies": [
+    "acme:ec2-idle"
+   ],
+   "runtime": true,
+   "says": [
+    "CPU"
+   ]
+  },
+  {
+   "id": "tags-are-not",
+   "policies": [
+    "acme:ec2-cost-center"
+   ],
+   "runtime": false,
+   "says": [
+    "CostCenter"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EC2 instances without a `CostCenter` tag are flagged. Instances with one pass. MEDIUM, ORG; reports only. acme:ec2-cost-center@1\n## Runtime-only (may change resources outside your control)\n- EC2 instances averaging under 5% `CPUUtilization` over 14 days are flagged. Busier instances pass. LOW, COST; reports only. acme:ec2-idle@1",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances averaging under 5% `CPUUtilization` over 14 days are flagged. Busier instances pass. LOW, COST; reports only. acme:ec2-idle@1\n- EC2 instances without a `CostCenter` tag are flagged. Instances with one pass. MEDIUM, ORG; reports only. acme:ec2-cost-center@1",
+   "fails": [
+    "utilisation-is-runtime"
+   ]
+  },
+  {
+   "output": "- EC2 instances averaging under 5% `CPUUtilization` over 14 days are flagged. Busier instances pass. LOW, COST; reports only. acme:ec2-idle@1\n## Runtime-only (may change resources outside your control)\n- EC2 instances without a `CostCenter` tag are flagged. Instances with one pass. MEDIUM, ORG; reports only. acme:ec2-cost-center@1",
+   "fails": [
+    "utilisation-is-runtime",
+    "tags-are-not"
+   ]
+  }
+ ]
+}

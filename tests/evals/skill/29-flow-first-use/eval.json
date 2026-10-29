@@ -1,0 +1,12 @@
+{
+  "kind": "flow",
+  "prompt": "add terraform for a private s3 bucket holding our nightly build artifacts. aws provider v5.",
+  "setup": "no posture, collection or account cached; the posture assessment and the distillations are (keyed by what the fake server serves), so the sync's assessment step is not exercised. The fake Stacklet MCP server serves the fixture, padded past 25,000 tokens a result so Claude Code saves each to a file, as a real deployment's are",
+  "start": {
+    "cache": "none"
+  },
+  "mcp": {
+    "pad": 120
+  },
+  "expected_output": "Syncs: the posture, then the in-scope collections, each once and with the skill's own queries, copying the saved results; ingests them; shows aws.s3 and writes the bucket only then: public access block, SSE-KMS with a CMK, required tags."
+}

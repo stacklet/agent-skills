@@ -1,0 +1,364 @@
+{
+ "about": "Fifteen S3 policies, as a real baseline collection has: every one cited, the remediation said, different conditions kept apart, under load. (Policies with the same condition come grouped in the bundle, so joining them tests the bundle, not the model.)",
+ "resource_type": "aws.s3",
+ "policies": [
+  {
+   "name": "acme:s3-block-public-acls",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-block-public-acls",
+    "resource": "aws.s3",
+    "description": "Block public ACLs.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "BlockPublicAcls": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-block-public-policy",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-block-public-policy",
+    "resource": "aws.s3",
+    "description": "Block public policies.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "BlockPublicPolicy": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-ignore-public-acls",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-ignore-public-acls",
+    "resource": "aws.s3",
+    "description": "Ignore public ACLs.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "IgnorePublicAcls": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-restrict-public-buckets",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-restrict-public-buckets",
+    "resource": "aws.s3",
+    "description": "Restrict public buckets.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "RestrictPublicBuckets": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-default-encryption",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-default-encryption",
+    "resource": "aws.s3",
+    "description": "Default encryption.",
+    "filters": [
+     {
+      "type": "bucket-encryption",
+      "state": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "cis:s3-default-encryption",
+   "version": 4,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "s3-default-encryption",
+    "resource": "aws.s3",
+    "description": "CIS: default encryption.",
+    "filters": [
+     {
+      "type": "bucket-encryption",
+      "state": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-kms-encryption",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-kms-encryption",
+    "resource": "aws.s3",
+    "description": "Use KMS, not S3-managed keys.",
+    "filters": [
+     {
+      "type": "bucket-encryption",
+      "crypto": "AES256"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-versioning",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-versioning",
+    "resource": "aws.s3",
+    "description": "Keep versions.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "Versioning.Status",
+      "op": "ne",
+      "value": "Enabled"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-mfa-delete",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-mfa-delete",
+    "resource": "aws.s3",
+    "description": "MFA delete.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "Versioning.MFADelete",
+      "op": "ne",
+      "value": "Enabled"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-access-logging",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-access-logging",
+    "resource": "aws.s3",
+    "description": "Log access.",
+    "filters": [
+     {
+      "type": "bucket-logging",
+      "op": "disabled"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-tls-only",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-tls-only",
+    "resource": "aws.s3",
+    "description": "Deny plain HTTP.",
+    "filters": [
+     {
+      "type": "missing-policy-statement",
+      "statement_ids": [
+       "DenyInsecureTransport"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-owner-enforced",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-owner-enforced",
+    "resource": "aws.s3",
+    "description": "ACLs disabled.",
+    "filters": [
+     {
+      "type": "ownership",
+      "value": "BucketOwnerEnforced",
+      "op": "ne"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-owner-tag",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-owner-tag",
+    "resource": "aws.s3",
+    "description": "Buckets have an owner.",
+    "filters": [
+     {
+      "tag:Owner": "absent"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-cost-center-tag",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-cost-center-tag",
+    "resource": "aws.s3",
+    "description": "Buckets have a cost center.",
+    "filters": [
+     {
+      "tag:CostCenter": "absent"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-public-block-enforce",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-public-block-enforce",
+    "resource": "aws.s3",
+    "description": "Put the ACL block back.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "BlockPublicAcls": false
+     }
+    ],
+    "actions": [
+     {
+      "type": "set-public-block",
+      "BlockPublicAcls": true
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "remediation-said",
+   "policies": [
+    "acme:s3-block-public-acls",
+    "acme:s3-public-block-enforce"
+   ],
+   "says": [
+    "\\b(one|ORG|acme|another|enforc\\w*|REF)\\b(?:(?!\\.\\s).)*\\b(sets|turns|re-?enables|restores|puts)\\b|set-public-block"
+   ]
+  },
+  {
+   "id": "different-apart",
+   "apart": true,
+   "policies": [
+    "acme:s3-versioning",
+    "acme:s3-access-logging",
+    "acme:s3-tls-only",
+    "acme:s3-kms-encryption",
+    "acme:s3-owner-enforced"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; one policy turns it back on. acme:s3-block-public-acls@1 acme:s3-public-block-enforce@1\n- S3 buckets with `BlockPublicPolicy` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-block-public-policy@1\n- S3 buckets with `IgnorePublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-ignore-public-acls@1\n- S3 buckets with `RestrictPublicBuckets` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-restrict-public-buckets@1\n- S3 buckets without default encryption are flagged. Encrypted buckets pass. HIGH (ORG), MEDIUM (CIS); reports only. acme:s3-default-encryption@1 cis:s3-default-encryption@4\n- S3 buckets encrypted with `AES256` are flagged. Buckets using KMS pass. MEDIUM, ORG; reports only. acme:s3-kms-encryption@1\n- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning@1\n- S3 buckets whose `Versioning.MFADelete` isn't `Enabled` are flagged. Buckets with MFA delete pass. LOW, ORG; reports only. acme:s3-mfa-delete@1\n- S3 buckets with access logging disabled are flagged. Logging buckets pass. MEDIUM, ORG; reports only. acme:s3-access-logging@1\n- S3 buckets whose policy lacks the `DenyInsecureTransport` statement are flagged. Buckets with it pass. HIGH, ORG; reports only. acme:s3-tls-only@1\n- S3 buckets whose object ownership isn't `BucketOwnerEnforced` are flagged. Buckets with ACLs disabled pass. MEDIUM, ORG; reports only. acme:s3-owner-enforced@1\n- S3 buckets without an `Owner` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-owner-tag@1\n- S3 buckets without a `CostCenter` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-cost-center-tag@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; one policy turns it back on. acme:s3-block-public-acls@1 acme:s3-public-block-enforce@1\n- S3 buckets with `BlockPublicPolicy` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-block-public-policy@1\n- S3 buckets with `IgnorePublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-ignore-public-acls@1\n- S3 buckets with `RestrictPublicBuckets` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-restrict-public-buckets@1\n- S3 buckets without default encryption are flagged. Encrypted buckets pass. HIGH (ORG), MEDIUM (CIS); reports only. acme:s3-default-encryption@1 cis:s3-default-encryption@4\n- S3 buckets encrypted with `AES256` are flagged. Buckets using KMS pass. MEDIUM, ORG; reports only. acme:s3-kms-encryption@1\n- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning@1\n- S3 buckets whose `Versioning.MFADelete` isn't `Enabled` are flagged. Buckets with MFA delete pass. LOW, ORG; reports only. acme:s3-mfa-delete@1\n- S3 buckets with access logging disabled are flagged. Logging buckets pass. MEDIUM, ORG; reports only. acme:s3-access-logging@1\n- S3 buckets whose policy lacks the `DenyInsecureTransport` statement are flagged. Buckets with it pass. HIGH, ORG; reports only. acme:s3-tls-only@1 acme:s3-versioning@1\n- S3 buckets whose object ownership isn't `BucketOwnerEnforced` are flagged. Buckets with ACLs disabled pass. MEDIUM, ORG; reports only. acme:s3-owner-enforced@1\n- S3 buckets without an `Owner` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-owner-tag@1\n- S3 buckets without a `CostCenter` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-cost-center-tag@1",
+   "fails": [
+    "different-apart"
+   ]
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; one policy turns it back on. acme:s3-block-public-acls@1\n- S3 buckets with `BlockPublicPolicy` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-block-public-policy@1\n- S3 buckets with `IgnorePublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-ignore-public-acls@1\n- S3 buckets with `RestrictPublicBuckets` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-restrict-public-buckets@1\n- S3 buckets without default encryption are flagged. Encrypted buckets pass. HIGH (ORG), MEDIUM (CIS); reports only. acme:s3-default-encryption@1\n- S3 buckets encrypted with `AES256` are flagged. Buckets using KMS pass. MEDIUM, ORG; reports only. acme:s3-kms-encryption@1\n- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning@1\n- S3 buckets with access logging disabled are flagged. Logging buckets pass. MEDIUM, ORG; reports only. acme:s3-access-logging@1\n- S3 buckets whose policy lacks the `DenyInsecureTransport` statement are flagged. Buckets with it pass. HIGH, ORG; reports only. acme:s3-tls-only@1\n- S3 buckets whose object ownership isn't `BucketOwnerEnforced` are flagged. Buckets with ACLs disabled pass. MEDIUM, ORG; reports only. acme:s3-owner-enforced@1\n- S3 buckets without an `Owner` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-owner-tag@1\n- S3 buckets without a `CostCenter` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-cost-center-tag@1",
+   "fails": [
+    "cited"
+   ]
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-block-public-acls@1 acme:s3-public-block-enforce@1\n- S3 buckets with `BlockPublicPolicy` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-block-public-policy@1\n- S3 buckets with `IgnorePublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-ignore-public-acls@1\n- S3 buckets with `RestrictPublicBuckets` off are flagged. Buckets with it on pass. HIGH, ORG; reports only. acme:s3-restrict-public-buckets@1\n- S3 buckets without default encryption are flagged. Encrypted buckets pass. HIGH (ORG), MEDIUM (CIS); reports only. acme:s3-default-encryption@1 cis:s3-default-encryption@4\n- S3 buckets encrypted with `AES256` are flagged. Buckets using KMS pass. MEDIUM, ORG; reports only. acme:s3-kms-encryption@1\n- S3 buckets whose `Versioning.Status` isn't `Enabled` are flagged. Versioned buckets pass. MEDIUM, ORG; reports only. acme:s3-versioning@1\n- S3 buckets whose `Versioning.MFADelete` isn't `Enabled` are flagged. Buckets with MFA delete pass. LOW, ORG; reports only. acme:s3-mfa-delete@1\n- S3 buckets with access logging disabled are flagged. Logging buckets pass. MEDIUM, ORG; reports only. acme:s3-access-logging@1\n- S3 buckets whose policy lacks the `DenyInsecureTransport` statement are flagged. Buckets with it pass. HIGH, ORG; reports only. acme:s3-tls-only@1\n- S3 buckets whose object ownership isn't `BucketOwnerEnforced` are flagged. Buckets with ACLs disabled pass. MEDIUM, ORG; reports only. acme:s3-owner-enforced@1\n- S3 buckets without an `Owner` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-owner-tag@1\n- S3 buckets without a `CostCenter` tag are flagged. Tagged buckets pass. LOW, ORG; reports only. acme:s3-cost-center-tag@1",
+   "fails": [
+    "remediation-said"
+   ]
+  }
+ ]
+}

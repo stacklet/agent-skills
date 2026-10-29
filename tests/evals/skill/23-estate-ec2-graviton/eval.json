@@ -1,0 +1,6 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "terraform for an EC2 instance to run our nightly report worker, amazon linux 2023, with a separate 100GB data volume attached.",
+  "expected_output": "The wave-rolled collections apply by default: a Graviton instance family (c7g, m7g, r7g, t4g, c8g, m8g or r8g) and so an arm64 AMI, gp3 volumes, encrypted EBS, IMDSv2 required, tags mrd:owner, mrd:service and mrd:environment (dev, stage or prod)."
+}

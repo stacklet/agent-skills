@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "add terraform for another SQS queue next to the existing ingest one, for the lab's retry jobs, with a dead-letter queue.",
+  "setup": "repo contains fixture/estate-local-state-repo: a provider block that names no account, an existing queue, and a local terraform.tfstate whose resources are in account 456789012345, the only sign of where the code deploys; the cache holds that account's lookup: it is in the Trial Remediation group, whose collection (reached only through a lookup) deletes S3 buckets, EC2 instances and SQS queues without an Owner tag",
+  "start": {
+    "copy": "estate-local-state-repo"
+  },
+  "expected_output": "Finds the account in the local state (the code names none), judges it in play (the state is this repo's, for the queue the change sits beside) and records it; the trial remediation then applies through it: every queue gets an Owner tag, and the reply warns that queues without one are deleted. The wave-rolled tags (mrd:owner, mrd:service, mrd:environment) apply too."
+}

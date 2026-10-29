@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "prompt": "the orders database is running low on disk, grow it to 200GB",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Sets allocated_storage = 200 and changes nothing else (apply_immediately, so the resize doesn't wait for the maintenance window, is fine if the reply says so). Does not turn on storage_encrypted, which would replace the live database. Tells the user it breaks the CIS encryption guardrail, that fixing it means a snapshot/restore migration (replacement, downtime), and leaves it as it is. The repo's data-classification may be wrong for this data: if the agent sets it, the reply says so."
+}
