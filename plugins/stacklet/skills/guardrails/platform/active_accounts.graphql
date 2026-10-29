@@ -1,0 +1,21 @@
+# Only for a provider without an "all accounts" group (dynamicFilter ""), which ingest.py names in a
+# warning: its count of *active* accounts is then its total (never `accountSummary`, which counts
+# inactive accounts too).
+#
+# 1. The provider filter takes lowercase slugs that are not always the CloudProvider name (Kubernetes
+#    is "k8s"), and an unknown slug gives total null, not an error. Get the slugs from the schema:
+#
+#      { accounts(first: 1) { filterSchema { filters { name suggestions } } } }   # name == "provider"
+#
+# 2. Replace __PROVIDER__ below with the CloudProvider name ingest.py named (e.g. TencentCloud): the
+#    alias is how ingest knows whose count it is. Run it with `variables` {"provider": "<slug>"} and
+#    save the result as active_<n>.json. One query per provider: every line would share the one
+#    `$provider` variable.
+#
+query ActiveAccounts($provider: String!) {
+  platform { urls { console } }
+  active___PROVIDER__: accounts(first: 1, filterElement: {single: {name: "provider", value: $provider}}) { pageInfo { total } }
+}
+#
+# 3. `ingest.py <deployment> posture posture.json active_<n>.json [..]`. A null total means zero
+#    accounts *or* an unknown slug: ingest warns, so check the slug against step 1.

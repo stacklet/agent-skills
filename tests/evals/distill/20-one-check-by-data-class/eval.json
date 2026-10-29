@@ -1,0 +1,108 @@
+{
+ "about": "Message retention at two thresholds by a data-class tag (critical queues keep messages 14 days, the rest 4): one bullet, or one per class naming the other.",
+ "resource_type": "aws.sqs",
+ "policies": [
+  {
+   "name": "acme:sqs-retention-critical",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "sqs-retention-critical",
+    "resource": "aws.sqs",
+    "description": "Critical queues keep messages longest.",
+    "filters": [
+     {
+      "tag:data-class": "critical"
+     },
+     {
+      "type": "value",
+      "key": "MessageRetentionPeriod",
+      "op": "lt",
+      "value": 1209600
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:sqs-retention",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "sqs-retention",
+    "resource": "aws.sqs",
+    "description": "Queues keep messages for a few days.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "tag:data-class",
+      "op": "ne",
+      "value": "critical"
+     },
+     {
+      "type": "value",
+      "key": "MessageRetentionPeriod",
+      "op": "lt",
+      "value": 345600
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "joined-or-linked",
+   "policies": [
+    "acme:sqs-retention-critical",
+    "acme:sqs-retention"
+   ],
+   "says": [
+    "MessageRetentionPeriod",
+    "critical",
+    "1209600|14 days",
+    "345600|4 days"
+   ],
+   "linked": {
+    "acme:sqs-retention-critical": [
+     "345600|\\b4[- ]days?\\b|\\bfour days\\b|\\b96 hours\\b"
+    ],
+    "acme:sqs-retention": [
+     "1209600|\\b14[- ]days?\\b|\\bfourteen days\\b|\\btwo weeks\\b"
+    ]
+   }
+  }
+ ],
+ "controls": [
+  {
+   "output": "- SQS queues with `MessageRetentionPeriod` under 1209600 seconds (14 days) are flagged when tagged `data-class: critical` (HIGH), and under 345600 (4 days) otherwise (LOW). Queues meeting their class's minimum pass. ORG; reports only. acme:sqs-retention-critical@1 acme:sqs-retention@1",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues tagged `data-class: critical` with `MessageRetentionPeriod` under 1209600 (14 days) are flagged; other queues need only 4 days. Others pass. HIGH, ORG; reports only. acme:sqs-retention-critical@1\n- SQS queues not tagged `data-class: critical` with `MessageRetentionPeriod` under 345600 (4 days) are flagged; critical queues need 14 days. Others pass. LOW, ORG; reports only. acme:sqs-retention@1",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues tagged `data-class` `critical` with `MessageRetentionPeriod` below 1209600 seconds (14 days) are flagged; other queues are left to the 4-day threshold below. Others pass. high, ORG; reports only. acme:sqs-retention-critical@1\n- SQS queues whose `data-class` tag is not `critical` with `MessageRetentionPeriod` below 345600 seconds (4 days) are flagged; critical queues are held to the 14-day threshold above instead. Others pass. low, ORG; reports only. acme:sqs-retention@1",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues tagged `data-class: critical` with `MessageRetentionPeriod` under 1209600 are flagged. Others pass. HIGH, ORG; reports only. acme:sqs-retention-critical@1\n- SQS queues with `MessageRetentionPeriod` under 345600 are flagged. Others pass. LOW, ORG; reports only. acme:sqs-retention@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- SQS queues tagged `data-class: critical` with `MessageRetentionPeriod` under 1209600 (14 days) are flagged. Non-critical queues pass this check. HIGH, ORG; reports only. acme:sqs-retention-critical@1\n- SQS queues not tagged `data-class: critical` with `MessageRetentionPeriod` under 345600 (4 days) are flagged. Critical queues pass this check. LOW, ORG; reports only. acme:sqs-retention@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  }
+ ]
+}

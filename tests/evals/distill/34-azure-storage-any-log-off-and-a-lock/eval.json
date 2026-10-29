@@ -1,0 +1,164 @@
+{
+ "about": "The first Azure storage shapes. A JMESPath key `logging.read && logging.write && logging.delete` compared equal to false flags an account when any one of the three is off, not only when all are; and a remediation can be a `ReadOnly` lock on the whole account, which an agent must hear about. The collection it came from read both right in every run; this guards them.",
+ "resource_type": "azure.storage",
+ "policies": [
+  {
+   "name": "acme:storage-blob-logging-inform",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "storage-blob-logging-inform",
+    "resource": "azure.storage",
+    "filters": [
+     {
+      "type": "storage-diagnostic-settings",
+      "storage-type": "blob",
+      "key": "logging.read && logging.write && logging.delete",
+      "op": "eq",
+      "value": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:storage-blob-logging-enable",
+   "version": 1,
+   "severity": "low",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "storage-blob-logging-enable",
+    "resource": "azure.storage",
+    "filters": [
+     {
+      "type": "storage-diagnostic-settings",
+      "storage-type": "blob",
+      "key": "logging.read && logging.write && logging.delete",
+      "op": "eq",
+      "value": false
+     }
+    ],
+    "actions": [
+     {
+      "type": "set-log-settings",
+      "storage-types": [
+       "blob"
+      ],
+      "retention": 90,
+      "log": [
+       "read",
+       "write",
+       "delete"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:storage-shared-key-inform",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "storage-shared-key-inform",
+    "resource": "azure.storage",
+    "filters": [
+     {
+      "type": "value",
+      "key": "properties.allowSharedKeyAccess",
+      "value": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:storage-shared-key-lock",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "storage-shared-key-lock",
+    "resource": "azure.storage",
+    "filters": [
+     {
+      "type": "value",
+      "key": "properties.allowSharedKeyAccess",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "lock",
+      "lock-type": "ReadOnly"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "any-one-log-off",
+   "policies": [
+    "acme:storage-blob-logging-inform",
+    "acme:storage-blob-logging-enable"
+   ],
+   "says": [
+    "\\b(any|either|one|at least one) (one )?(of )?(the three|read|those)\\b|\\bnot all\\b|\\b(any|one or more)\\b(?:[^.;]|\\.(?=\\w)){0,100}\\b(off|disabled|false|missing)\\b|\\bnot (be )?(enabled|on|logged) for all\\b|\\bdo(es)? not have\\b[^.;]{0,60}\\ball\\b|\\bread, write,? or delete\\b[^.;]{0,60}\\b(off|disabled|not enabled|turned off)\\b|\\bin any combination\\b|\\b(covers|covering|logs?|logging) all three\\b"
+   ],
+   "not": [
+    "\\b(all|both|every one) (three )?(are |is )?(off|disabled|false)\\b|\\b(read, write and delete|all three)\\b[^.;]{0,20}\\b(off|disabled)\\b[^.;]{0,30}\\bflagged"
+   ]
+  },
+  {
+   "id": "read-only-lock",
+   "policies": [
+    "acme:storage-shared-key-lock"
+   ],
+   "says": [
+    "\\bread[- ]?only\\b[^.;]{0,30}\\block|\\block(s|ed|ing)?\\b[^.;]{0,40}\\bread[- ]?only"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Storage accounts where any of read, write or delete logging is off for blobs are flagged; accounts logging all three pass. LOW; scheduled scan; one policy reports, the other turns all three on with 90-day retention. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged; accounts with it false pass. HIGH; scheduled scan; one policy reports, the other puts a ReadOnly lock on the account. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": []
+  },
+  {
+   "output": "- Blob services where any of `logging.read`, `logging.write` or `logging.delete` is off are flagged. LOW; scheduled scan; one reports, the other turns logging on. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged. HIGH; scheduled scan; one reports, the other puts a ReadOnly lock on the account. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": []
+  },
+  {
+   "output": "- Blob storage with read, write or delete logging off is flagged; blob storage logging all three passes. LOW; scheduled scan; one reports, the other turns logging on. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged. HIGH; scheduled scan; one reports, the other puts a ReadOnly lock on the account. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": []
+  },
+  {
+   "output": "- Storage accounts where blob logging is not enabled for all of read, write and delete are flagged. LOW; scheduled scan; one reports, the other turns logging on. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged. HIGH; scheduled scan; one reports, the other applies a ReadOnly lock to the account. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": []
+  },
+  {
+   "output": "- Blob storage whose diagnostic settings do not have read, write and delete logging all enabled is flagged. LOW; scheduled scan; one reports, the other turns logging on. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged. HIGH; scheduled scan; one reports, the other puts a ReadOnly lock on the account. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": []
+  },
+  {
+   "output": "- Storage accounts with read, write and delete blob logging all disabled are flagged. LOW; scheduled scan; one reports, the other turns logging on. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged. HIGH; scheduled scan; one reports, the other locks the account read-only. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": [
+    "any-one-log-off"
+   ]
+  },
+  {
+   "output": "- Storage accounts where any of read, write or delete blob logging is off are flagged. LOW; scheduled scan; one reports, the other turns logging on. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1\n- Storage accounts with `allowSharedKeyAccess` true are flagged. HIGH; scheduled scan; one reports, the other remediates the account. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1",
+   "fails": [
+    "read-only-lock"
+   ]
+  },
+  {
+   "output": "- Storage accounts with `properties.allowSharedKeyAccess` set to true are flagged, and accounts where it is false or not set to true pass. HIGH, no compliance framework; runs on a scheduled pull scan whose timing the platform sets; `acme:storage-shared-key-inform@1` only reports, while `acme:storage-shared-key-lock@1` applies an Azure `ReadOnly` lock to the flagged account, which blocks changes to the account, including changing this setting, until the lock is removed. acme:storage-shared-key-inform@1, acme:storage-shared-key-lock@1\n- Blob storage accounts whose diagnostic settings do not log `read`, `write` and `delete` operations are flagged, and blob logging that covers all three passes whatever its retention. LOW, no compliance framework; runs on a scheduled pull scan whose timing the platform sets; `acme:storage-blob-logging-inform@1` only reports, while `acme:storage-blob-logging-enable@1` turns on read, write and delete logging for blob storage with a retention of 90 days. acme:storage-blob-logging-inform@1, acme:storage-blob-logging-enable@1",
+   "fails": []
+  }
+ ]
+}

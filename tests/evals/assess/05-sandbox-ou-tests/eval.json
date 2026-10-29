@@ -1,0 +1,21 @@
+{
+  "shape": "Few groups, many collections: most bound everywhere, test collections bound to the sandbox OU (asked about, not ignored), and single-policy tagging collections on hand-picked groups.",
+  "expect": {
+    "collections": {
+      "Default Tag Testing": [
+        "ask"
+      ],
+      "rds yew1 testing": [
+        "ask"
+      ]
+    },
+    "questions": [
+      {
+        "adds": [
+          "Default Tag Testing",
+          "rds yew1 testing"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+{
+ "about": "GCP's event mode (`gcp-audit`, on audit-log methods) reacts just after the method, as AWS's cloudtrail mode does: the bullet says the rtc variant runs after the instance insert (and the rtu after an update), and never that the call is blocked. The evals' only GCP case.",
+ "resource_type": "gcp.instance",
+ "policies": [
+  {
+   "name": "acme:gcp-ip-forward-inform",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "gcp-ip-forward-inform",
+    "resource": "gcp.instance",
+    "filters": [
+     {
+      "canIpForward": true
+     },
+     {
+      "type": "value",
+      "key": "labels.\"goog-gke-node\"",
+      "op": "eq",
+      "value": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:gcp-ip-forward-rtc",
+   "version": 1,
+   "severity": "medium",
+   "mode": "gcp-audit",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "gcp-ip-forward-rtc",
+    "resource": "gcp.instance",
+    "mode": {
+     "type": "gcp-audit",
+     "methods": [
+      "v1.compute.instances.insert",
+      "v1.compute.instances.bulkInsert"
+     ]
+    },
+    "filters": [
+     {
+      "canIpForward": true
+     },
+     {
+      "type": "value",
+      "key": "labels.\"goog-gke-node\"",
+      "op": "eq",
+      "value": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:gcp-ip-forward-rtu",
+   "version": 1,
+   "severity": "medium",
+   "mode": "gcp-audit",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "gcp-ip-forward-rtu",
+    "resource": "gcp.instance",
+    "mode": {
+     "type": "gcp-audit",
+     "methods": [
+      "v1.compute.instances.update"
+     ]
+    },
+    "filters": [
+     {
+      "canIpForward": true
+     },
+     {
+      "type": "value",
+      "key": "labels.\"goog-gke-node\"",
+      "op": "eq",
+      "value": null
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "after-the-insert",
+   "policies": [
+    "acme:gcp-ip-forward-rtc"
+   ],
+   "says": [
+    "\\binsert\\b",
+    "\\b(after|shortly|once|following)\\b"
+   ],
+   "not": [
+    "(?<!not )(?<!never )(?<!n't )(?<!no )(?<!than )(?<!without )\\b(block\\w*|den(y|ies|ied)|refus\\w*|reject\\w*)\\b|\\bprevents? (it|the instance|the call|creation)\\b"
+   ]
+  },
+  {
+   "id": "after-the-update",
+   "policies": [
+    "acme:gcp-ip-forward-rtu"
+   ],
+   "says": [
+    "\\bupdate\\b",
+    "\\b(after|shortly|once|following)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- GCE instances with `canIpForward` true, other than GKE nodes (`goog-gke-node` label), are flagged. Instances without IP forwarding pass. MEDIUM, CIS; the inform policy runs on a scheduled scan, the rtc policy shortly after `v1.compute.instances.insert` or `bulkInsert`, the rtu policy shortly after `v1.compute.instances.update`; all report only. acme:gcp-ip-forward-inform@1, acme:gcp-ip-forward-rtc@1, acme:gcp-ip-forward-rtu@1",
+   "fails": []
+  },
+  {
+   "output": "- GCE instances with `canIpForward` true, other than GKE nodes, are flagged, and creating one is blocked at `v1.compute.instances.insert`. MEDIUM, CIS. acme:gcp-ip-forward-inform@1, acme:gcp-ip-forward-rtc@1, acme:gcp-ip-forward-rtu@1",
+   "fails": [
+    "after-the-insert",
+    "after-the-update"
+   ]
+  },
+  {
+   "output": "- GCE instances with `canIpForward` true, other than GKE nodes, are flagged. Instances without IP forwarding pass. MEDIUM, CIS; the rtc policy runs shortly after `v1.compute.instances.insert`, which it does not block, and the rtu policy shortly after `v1.compute.instances.update`; all report only. acme:gcp-ip-forward-inform@1, acme:gcp-ip-forward-rtc@1, acme:gcp-ip-forward-rtu@1",
+   "fails": []
+  },
+  {
+   "output": "- GCE instances with `canIpForward` true, other than GKE nodes, are flagged. Instances without IP forwarding pass. MEDIUM, CIS; the rtc policy runs shortly after `v1.compute.instances.insert`; all report only. acme:gcp-ip-forward-inform@1, acme:gcp-ip-forward-rtc@1, acme:gcp-ip-forward-rtu@1",
+   "fails": [
+    "after-the-update"
+   ]
+  }
+ ]
+}

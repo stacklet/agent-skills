@@ -1,0 +1,113 @@
+{
+ "about": "Which AMIs a policy sees is set by its `query`. Custodian lists only the account's own images unless the query says otherwise (`Owners` defaults to `self`, c7n/resources/ami.py); `Owners: []` lifts that, and `ExecutableUsers: [self, all]` then lists images the account was explicitly given launch permission on, or that are public: external images, not the account's own private ones. The first policy reports such images while instances use them (`unused` false). The second, with no query, sees only the account's own images, and removes public launch permission from any made public. The first policy's bullet says it is about public or shared images in use, never the account's own, nor unused ones. The shape comes from a collection in the wild reporting the external images its accounts run.",
+ "resource_type": "aws.ami",
+ "policies": [
+  {
+   "name": "acme:ami-external-images-in-use",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ami-external-images-in-use",
+    "resource": "aws.ami",
+    "query": [
+     {
+      "Owners": []
+     },
+     {
+      "ExecutableUsers": [
+       "self",
+       "all"
+      ]
+     }
+    ],
+    "filters": [
+     {
+      "type": "unused",
+      "value": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:ami-not-public",
+   "version": 2,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ami-not-public",
+    "resource": "aws.ami",
+    "filters": [
+     {
+      "type": "value",
+      "key": "Public",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "remove-launch-permissions",
+      "accounts": "matched"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "external-images-in-use",
+   "policies": [
+    "acme:ami-external-images-in-use"
+   ],
+   "says": [
+    "\\bpublic\\b",
+    "\\bshared\\b|launch permission|\\b(other|another|external|third[- ]party) (aws )?accounts?\\b|\\bnot owned\\b",
+    "\\bin use\\b|\\bused by\\b|\\b(launched|running) (from|on)\\b|\\b(instances?|launch templates?)\\b[^.;]{0,40}\\b(use|using|run|running)\\b"
+   ],
+   "not": [
+    "(?<!not )\\bunused (images|amis)\\b[^.;]{0,40}\\b(are )?(flagged|reported)",
+    "\\b(images|amis)\\b[^.;]{0,30}\\b(owned by (this|the|your) account|(this|the|your) account owns)\\b[^.;]{0,60}\\b(are )?(flagged|reported)"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Public AMIs, and AMIs other accounts shared with this one, are flagged while instances use them. Images no instance uses pass, as do the account's own private images. MEDIUM, ORG; scheduled scan; reports only. acme:ami-external-images-in-use@1\n- The account's AMIs that are public are flagged. Private AMIs pass. HIGH, ORG; scheduled scan; removes their public launch permission. acme:ami-not-public@2",
+   "fails": []
+  },
+  {
+   "output": "- AMIs that are public or that this account has been given launch permission on, and that are in use, are flagged. Unused images pass. MEDIUM, ORG; scheduled scan; reports only. acme:ami-external-images-in-use@1\n- Public AMIs are flagged. Private AMIs pass. HIGH, ORG; scheduled scan; removes the public launch permission. acme:ami-not-public@2",
+   "fails": []
+  },
+  {
+   "output": "- AMIs this account owns that are in use are flagged. Unused images pass. MEDIUM, ORG; scheduled scan; reports only. acme:ami-external-images-in-use@1\n- Public AMIs are flagged. Private AMIs pass. HIGH, ORG; scheduled scan; removes the public launch permission. acme:ami-not-public@2",
+   "fails": [
+    "external-images-in-use"
+   ]
+  },
+  {
+   "output": "- Public AMIs and AMIs shared from other accounts that no instance uses are flagged; unused images are reported. MEDIUM, ORG; scheduled scan; reports only. acme:ami-external-images-in-use@1\n- Public AMIs are flagged. Private AMIs pass. HIGH, ORG; scheduled scan; removes the public launch permission. acme:ami-not-public@2",
+   "fails": [
+    "external-images-in-use"
+   ]
+  },
+  {
+   "output": "- Public or shared AMIs used by instances are flagged, as are unused AMIs flagged by the second check. MEDIUM, ORG; scheduled scan; reports only. acme:ami-external-images-in-use@1\n- Public AMIs are flagged. Private AMIs pass. HIGH, ORG; scheduled scan; removes the public launch permission. acme:ami-not-public@2",
+   "fails": [
+    "external-images-in-use"
+   ]
+  },
+  {
+   "output": "- Public AMIs, including images owned by this account that are public, are flagged: those in use by instances are reported, and the account's own are made private. MEDIUM, HIGH, ORG; scheduled scan; reports, or removes public launch permission. acme:ami-external-images-in-use@1 acme:ami-not-public@2",
+   "fails": [
+    "external-images-in-use"
+   ]
+  }
+ ]
+}

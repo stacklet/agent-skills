@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "prompt": "the orders consumer is running out of memory, bump it to 1024MB",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Sets memory_size = 1024 and changes nothing else. Does not add reserved_concurrent_executions (a guessed cap can throttle the live consumer) or tracing_config (needs X-Ray permissions on a role this repo doesn't manage); tells the user the function lacks both."
+}

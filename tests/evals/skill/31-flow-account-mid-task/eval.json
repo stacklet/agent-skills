@@ -1,0 +1,11 @@
+{
+  "kind": "flow",
+  "prompt": "add a terraform ec2 instance to this repo for a nightly batch job, t3.small, amazon linux 2023.",
+  "setup": "repo contains fixture/sandbox-repo/providers.tf, whose provider assumes a role in account 222222222222, the sandbox group's one account; the cache holds neither that account's lookup nor Sandbox Tagging's membership, and only the lookup brings Sandbox Tagging into scope (no question names it); the fake Stacklet MCP server serves both",
+  "start": {
+    "copy": "sandbox-repo",
+    "unload": ["Sandbox Tagging"],
+    "forget_accounts": true
+  },
+  "expected_output": "Finds the account in the provider block and records it; a sync looks it up and only then fetches Sandbox Tagging; the agent writes the instance only once that is ingested, with an Owner tag, and says untagged instances are marked and stopped."
+}

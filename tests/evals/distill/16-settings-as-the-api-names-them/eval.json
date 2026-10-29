@@ -1,0 +1,51 @@
+{
+ "about": "Settings are named as the cloud API and the filters do (`KmsMasterKeyId`), not as one infrastructure tool spells them (`kms_master_key_id`).",
+ "resource_type": "aws.sqs",
+ "policies": [
+  {
+   "name": "acme:sqs-kms",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "sqs-kms",
+    "resource": "aws.sqs",
+    "description": "Queues use KMS encryption.",
+    "filters": [
+     {
+      "KmsMasterKeyId": "absent"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "api-names",
+   "policies": [
+    "acme:sqs-kms"
+   ],
+   "says": [
+    "KmsMasterKeyId"
+   ],
+   "not": [
+    "kms_master_key_id|sqs_managed_sse|\\bkms_key\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- SQS queues without a `KmsMasterKeyId` are flagged. Queues with a KMS key set pass. MEDIUM, ORG; reports only. acme:sqs-kms@1",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues without `kms_master_key_id` are flagged. Queues with a KMS key pass. MEDIUM, ORG; reports only. acme:sqs-kms@1",
+   "fails": [
+    "api-names"
+   ]
+  }
+ ]
+}

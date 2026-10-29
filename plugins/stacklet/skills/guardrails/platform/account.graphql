@@ -1,0 +1,16 @@
+# Look up one account a repo deploys to: its org, OU path, tags, and the account groups it's in
+# (static and dynamic; discovery keeps a group per OU path, so every ancestor path's group is here
+# too), whose bindings say which collections apply to it.
+#
+# Run with variables {"provider": "<AWS|GCP|Azure|Kubernetes|TencentCloud>", "key": "<account id,
+# project id or subscription id>"}, save the response as <dir>/account_<n>.json and run
+# `ingest.py <deployment> accounts <dir>/account_<n>.json`. A null `account`: the platform doesn't
+# know that key (the main agent tells the user, then `decide --forget-account`).
+query Account($provider: CloudProvider!, $key: String!) {
+  platform { urls { console } }
+  account(provider: $provider, key: $key) {
+    key name provider path orgId active
+    tags { key value }
+    groupMappings(first: 1000) { pageInfo { total hasNextPage } edges { node { group { uuid name } } } }
+  }
+}

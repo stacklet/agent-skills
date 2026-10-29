@@ -1,0 +1,5 @@
+{
+  "kind": "discriminating",
+  "prompt": "I'm in the payments-service repo, it stores card transaction records. need terraform for a postgres RDS instance for it, multi-az, small instance class is fine.",
+  "expected_output": "The payments question answered from the prompt context, scope recorded, backup_retention_period >= 35, encrypted, private, plus required tags."
+}

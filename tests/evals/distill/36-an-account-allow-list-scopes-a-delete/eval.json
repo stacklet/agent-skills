@@ -1,0 +1,193 @@
+{
+ "about": "An event-mode policy deletes a queue just created without the right migration tag, but only in the accounts an allow-list file names (`conditions`: `account_id` `in` a CSV fetched from S3); queues of two divisions are exempt. Elsewhere the policy never runs. The bullet says the deletion happens only in the listed accounts (without claiming to know which they are), never that it applies everywhere or to unlisted accounts. The shape comes from a collection in the wild: one such policy per resource type, scoped to the accounts of one migration programme.",
+ "resource_type": "aws.sqs",
+ "policies": [
+  {
+   "name": "acme:sqs-migration-tag-delete",
+   "version": 2,
+   "severity": "high",
+   "mode": "cloudtrail",
+   "compliance": [],
+   "source": {
+    "name": "sqs-migration-tag-delete",
+    "resource": "aws.sqs",
+    "mode": {
+     "type": "cloudtrail",
+     "events": [
+      {
+       "source": "sqs.amazonaws.com",
+       "event": "CreateQueue",
+       "ids": "responseElements.queueUrl"
+      }
+     ]
+    },
+    "conditions": [
+     {
+      "type": "value",
+      "key": "account_id",
+      "op": "in",
+      "value_from": {
+       "url": "s3://acme-guardrail-config/migration-programme-accounts.csv",
+       "format": "csv2dict"
+      }
+     }
+    ],
+    "filters": [
+     {
+      "not": [
+       {
+        "or": [
+         {
+          "tag:Division": "platform"
+         },
+         {
+          "tag:Division": "security"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "or": [
+       {
+        "tag:map-migrated": "absent"
+       },
+       {
+        "type": "value",
+        "key": "tag:map-migrated",
+        "op": "ne",
+        "value": "mig00acme7example"
+       }
+      ]
+     }
+    ],
+    "actions": [
+     {
+      "type": "delete"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "only-listed-accounts",
+   "policies": [
+    "acme:sqs-migration-tag-delete"
+   ],
+   "says": [
+    "\\b(only|just)\\b[^.;]{0,80}\\baccounts?\\b[^.;]{0,60}\\b(list|listed|file|csv|named)\\b|\\baccounts?,? \\(?(listed|named) (in|on|by)\\b|\\baccounts? (in|on) (the|an?|that) [^.;]{0,40}\\b(list|file|csv)\\b|\\blisted accounts\\b|\\baccounts? (outside|not (on|in)) (the|that|this|an?)\\b[^.;]{0,50}\\b(list|file|csv)\\b[^.;]{0,30}\\bpass|\\b(other|any other|all other) accounts?\\b[^.;]{0,30}\\bpass"
+   ],
+   "not": [
+    "\\b(any|every|all) accounts?\\b[^.;]{0,40}\\b(deleted|flagged)|\\bin every account\\b",
+    "\\baccounts? (not |that are not |that aren't )(listed|named|in|on)\\b[^.;]{0,120}\\b(are |is )?(deleted|flagged|checked)\\b",
+    "\\baccounts? (listed |named )?(in|on) (the|that|an?) [^.;]{0,50}\\b(list|file|csv)\\b[^.;]{0,30}\\b(are |is )?(exempt|excluded|skipped|pass(es)?|never (checked|deleted))\\b"
+   ]
+  },
+  {
+   "id": "the-tag-and-value",
+   "policies": [
+    "acme:sqs-migration-tag-delete"
+   ],
+   "says": [
+    "map-migrated",
+    "mig00acme7example"
+   ],
+   "not": []
+  },
+  {
+   "id": "divisions-exempt",
+   "policies": [
+    "acme:sqs-migration-tag-delete"
+   ],
+   "says": [
+    "\\bplatform\\b",
+    "\\bsecurity\\b"
+   ],
+   "not": []
+  },
+  {
+   "id": "deleted-on-creation",
+   "policies": [
+    "acme:sqs-migration-tag-delete"
+   ],
+   "says": [
+    "\\bdelet",
+    "CreateQueue|\\b(created|creation|creating)\\b"
+   ],
+   "not": [
+    "\\b(reports? only|only reports)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- In the accounts listed in the migration-programme account file, SQS queues without a `map-migrated` tag of `mig00acme7example` are flagged, unless tagged `Division` `platform` or `security`. Queues with that tag value pass, as do queues in any other account. HIGH; runs shortly after each `CreateQueue` call; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues missing `map-migrated` = `mig00acme7example` are flagged, only in accounts named in an external account list; queues tagged `Division` `platform` or `security` pass. HIGH; runs right after `CreateQueue`; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues without `map-migrated` set to `mig00acme7example` are flagged in every account, unless tagged `Division` `platform` or `security`. HIGH; runs shortly after `CreateQueue`; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": [
+    "only-listed-accounts"
+   ]
+  },
+  {
+   "output": "- SQS queues without `map-migrated` set to `mig00acme7example` are flagged, unless tagged `Division` `platform` or `security`; accounts on the migration-programme list are exempt. HIGH; runs shortly after `CreateQueue`; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": [
+    "only-listed-accounts"
+   ]
+  },
+  {
+   "output": "- In accounts not listed in the migration-programme file, SQS queues without `map-migrated` set to `mig00acme7example` are flagged, unless tagged `Division` `platform` or `security`. HIGH; runs shortly after `CreateQueue`; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": [
+    "only-listed-accounts"
+   ]
+  },
+  {
+   "output": "- In the listed accounts, SQS queues without a `map-migrated` tag are flagged, unless tagged `Division` `platform` or `security`. HIGH; runs shortly after `CreateQueue`; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": [
+    "the-tag-and-value"
+   ]
+  },
+  {
+   "output": "- In the accounts listed in the migration-programme file, SQS queues without `map-migrated` set to `mig00acme7example` are flagged. HIGH; runs shortly after `CreateQueue`; deletes the queue. acme:sqs-migration-tag-delete@2",
+   "fails": [
+    "divisions-exempt"
+   ]
+  },
+  {
+   "output": "- In the accounts listed in the migration-programme file, SQS queues without `map-migrated` set to `mig00acme7example` are flagged, unless tagged `Division` `platform` or `security`. HIGH; reports only. acme:sqs-migration-tag-delete@2",
+   "fails": [
+    "deleted-on-creation"
+   ]
+  },
+  {
+   "output": "- SQS queues created in an account on the migration programme list (`migration-programme-accounts.csv`) are flagged when their `Division` tag is neither `platform` nor `security` (queues with no `Division` tag at all are flagged too) and their `map-migrated` tag is either absent or not `mig00acme7example`. Queues in accounts not on the list pass, as do queues tagged `Division` `platform` or `security` and queues tagged `map-migrated` `mig00acme7example`. Because the policy checks each queue right after `CreateQueue`, those tags must already be on the queue at that point. HIGH, no compliance frameworks; runs shortly after a `CreateQueue` call from `sqs.amazonaws.com` with no delay, and deletes the flagged queue immediately. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues in the accounts listed in `s3://acme-guardrail-config/migration-programme-accounts.csv` are flagged when their `Division` tag is neither `platform` nor `security` (a queue with no `Division` tag counts as neither) and their `map-migrated` tag is absent or not `mig00acme7example`. Queues in accounts not on that list pass, whatever their tags. Queues in listed accounts tagged `Division` `platform` or `security` pass, as do queues whose `map-migrated` tag is `mig00acme7example`. HIGH, no compliance framework; runs shortly after a `sqs.amazonaws.com` `CreateQueue` event, with no delay set, not on a schedule; deletes the flagged queue. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues in a migration-programme account (one listed in the migration-programme accounts list) are flagged when their `Division` tag is missing or set to something other than `platform` or `security`, and their `map-migrated` tag is either absent or set to any value other than `mig00acme7example`. Queues in accounts outside that list pass, as do queues tagged `Division` `platform` or `security`, and queues tagged `map-migrated` `mig00acme7example`. Severity high, no compliance framework; runs shortly after a `CreateQueue` call by `sqs.amazonaws.com` is recorded in CloudTrail, with no delay set and not on a schedule; deletes the queue, with no marking step or grace period. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues in migration-programme accounts are flagged when they have no `Division` tag, or a `Division` tag other than `platform` or `security`, and their `map-migrated` tag is either absent or set to a value other than `mig00acme7example`. Queues in accounts outside the migration-programme list pass, as do queues tagged `Division` `platform` or `security`, and queues tagged `map-migrated` `mig00acme7example`. HIGH severity, no compliance framework; runs shortly after a CloudTrail `CreateQueue` event from sqs.amazonaws.com is logged, with no delay and not on a schedule; deletes the flagged queue immediately. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues in the migration programme accounts (those listed in the account list) are flagged when their `Division` tag is neither `platform` nor `security`, including queues with no `Division` tag, and their `map-migrated` tag is either absent or not `mig00acme7example`. Queues in other accounts pass, as do queues tagged `Division` `platform` or `security`, and queues tagged `map-migrated` `mig00acme7example`. High severity, no compliance framework; runs shortly after each SQS `CreateQueue` call in CloudTrail, with no delay set, not on a schedule; deletes the flagged queue immediately, with no notification or grace period. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  },
+  {
+   "output": "- SQS queues in a migration-programme account (listed in `migration-programme-accounts.csv`) are flagged when they have no `map-migrated` tag, or one whose value is not `mig00acme7example`, unless their `Division` tag is `platform` or `security`. Queues in other accounts, queues tagged `Division` `platform` or `security`, and queues tagged `map-migrated` `mig00acme7example` pass. HIGH severity, no compliance framework; runs shortly after each CreateQueue call that CloudTrail records from sqs.amazonaws.com, with no delay, not on a schedule; deletes each flagged queue with no further notice, so the tag must be in place when that event is evaluated. acme:sqs-migration-tag-delete@2",
+   "fails": []
+  }
+ ]
+}

@@ -1,0 +1,84 @@
+{
+ "about": "A policy with no actions claims no fix: the bundle says it only reports, so saying so tests nothing, but a bullet must not invent one (its description, never shown to the model, claims an automatic one).",
+ "resource_type": "aws.ebs",
+ "policies": [
+  {
+   "name": "acme:ebs-encrypted",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "ebs-encrypted",
+    "resource": "aws.ebs",
+    "description": "Unencrypted volumes are automatically encrypted and snapshotted by the platform.",
+    "filters": [
+     {
+      "Encrypted": false
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "claims-no-fix",
+   "policies": [
+    "acme:ebs-encrypted"
+   ],
+   "says": [
+    "Encrypted"
+   ],
+   "not": [
+    "automatic|\\b(it|policy|platform|Stacklet) (also )?encrypts\\b|encrypted in place|remediat|snapshots? (are|is) (taken|created)|\\breplac\\w*\\b[^.;]{0,40}\\b(volume|copy|snapshot)\\b|\\bencrypted copy\\b",
+    "Encrypted`?\\s+(set to |of )?`?true`?\\s+(are|is) flagged"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged. Encrypted volumes pass. HIGH, ORG; reports only. acme:ebs-encrypted@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged. Volumes with `Encrypted` true pass, whatever key encrypts them. HIGH, ORG; reports only. acme:ebs-encrypted@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged and automatically encrypted. Encrypted volumes pass. HIGH, ORG. acme:ebs-encrypted@1",
+   "fails": [
+    "claims-no-fix"
+   ]
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged. Encrypted volumes, including those restored from an encrypted snapshot, pass. HIGH, ORG; detect-only, no action is taken. acme:ebs-encrypted@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged and encrypted in place. Encrypted volumes pass. HIGH, ORG; reports to the owner. acme:ebs-encrypted@1",
+   "fails": [
+    "claims-no-fix"
+   ]
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged, and the policy encrypts them. Encrypted volumes pass. HIGH, ORG. acme:ebs-encrypted@1",
+   "fails": [
+    "claims-no-fix"
+   ]
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` true are flagged. Unencrypted volumes pass. HIGH, ORG; reports only. acme:ebs-encrypted@1",
+   "fails": [
+    "claims-no-fix"
+   ]
+  },
+  {
+   "output": "- EBS volumes with `Encrypted` false are flagged. Encrypted volumes pass. HIGH, ORG; reports only, then replaces the volume with an encrypted copy. acme:ebs-encrypted@1",
+   "fails": [
+    "claims-no-fix"
+   ]
+  }
+ ]
+}

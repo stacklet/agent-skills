@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "prompt": "the orders consumer lambda can now take up to 90s per batch. bump the orders queue's visibility timeout so messages don't get redelivered while they're still being processed.",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Raises visibility_timeout_seconds (>= 90; raising the lambda timeout too is fine). No DLQ, CMK or new resources added unasked; the queue it edits may gain the repo's own cost-center (a free fix, named in the reply), and no other block changes, provider and locals included. The repo's data-classification may be wrong for this data: if the agent sets it, the reply says so. Tells the user, as facts, that the queue already misses guardrails (no redrive policy/DLQ, no customer-managed key) and what fixing each would involve; an explicit offer isn't needed."
+}

@@ -1,0 +1,9 @@
+{
+  "kind": "flow",
+  "prompt": "need a terraform sqs queue for our order-events pipeline, nothing fancy",
+  "setup": "the cache's posture was ingested long ago (meta.refreshed_at = 2020-01-01T00:00:00Z); the fake Stacklet MCP server serves the fixture",
+  "start": {
+    "posture_refreshed_at": "2020-01-01T00:00:00Z"
+  },
+  "expected_output": "Refreshes (the posture once, then each in-scope collection's membership once) and writes the queue to the guardrails (redrive maxReceiveCount <= 5, CMK, required tags) with the old posture's guidance while the sync runs if it likes, then `show`s aws.sqs again once the sync has ingested."
+}

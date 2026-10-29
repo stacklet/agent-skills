@@ -1,0 +1,12 @@
+{
+  "kind": "flow",
+  "prompt": "add terraform for a private s3 bucket holding our nightly build artifacts. aws provider v5.",
+  "setup": "no posture or collection cached; the fake Stacklet MCP server serves the fixture but fails to serve Acme Org Standards (the org's tagging and encryption rules), as the platform reports a collection it can't serve",
+  "start": {
+    "cache": "none"
+  },
+  "mcp": {
+    "fail": ["Acme Org Standards"]
+  },
+  "expected_output": "Syncs; Acme Org Standards can't be fetched, so tells the user its guardrails are missing (not that none apply), doesn't keep refetching it, and still writes the bucket to what did load (CIS: public access block)."
+}

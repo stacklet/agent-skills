@@ -1,0 +1,86 @@
+{
+ "about": "A `periodic` policy's `schedule` is ignored by Stacklet (a binding's executions decide when it runs): the bullet says it's a scheduled scan, never gives a schedule, and never says it reacts to API calls.",
+ "resource_type": "aws.ebs",
+ "policies": [
+  {
+   "name": "acme:ebs-unattached",
+   "version": 1,
+   "severity": "low",
+   "mode": "periodic",
+   "compliance": [
+    "COST"
+   ],
+   "source": {
+    "name": "ebs-unattached",
+    "resource": "aws.ebs",
+    "description": "Find unattached volumes.",
+    "mode": {
+     "type": "periodic",
+     "schedule": "rate(1 day)"
+    },
+    "filters": [
+     {
+      "Attachments": []
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "no-schedule",
+   "policies": [
+    "acme:ebs-unattached"
+   ],
+   "says": [
+    "Attachments|unattached|not attached"
+   ],
+   "not": [
+    "daily|once a day|every day|\\b1 day\\b|each day|rate\\(|\\bevery \\d+ (hours?|days?|minutes?)|\\b24 hours\\b|\\b(hourly|nightly|weekly|monthly)\\b|\\bcron\\b",
+    "\\b(just|shortly|immediately|right) after\\b",
+    "\\bafter (the |an |each )?(API )?(call|event)",
+    "\\breacts? to\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EBS volumes with no `Attachments` are flagged by a scheduled scan. Attached volumes pass. LOW, COST; reports only. acme:ebs-unattached@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes whose `Attachments` list is empty are flagged. Volumes with attachments pass. LOW, COST; runs on a periodic scheduled scan whose timing the platform sets, so a volume can be flagged well after creation; reports only. acme:ebs-unattached@1",
+   "fails": []
+  },
+  {
+   "output": "- EBS volumes with no `Attachments` are flagged by a daily scan. Attached volumes pass. LOW, COST; reports only. acme:ebs-unattached@1",
+   "fails": [
+    "no-schedule"
+   ]
+  },
+  {
+   "output": "- EBS volumes with no `Attachments` are flagged shortly after the API call that detaches them. Attached volumes pass. LOW, COST; reports only. acme:ebs-unattached@1",
+   "fails": [
+    "no-schedule"
+   ]
+  },
+  {
+   "output": "- EBS volumes with no `Attachments` are flagged by a scheduled scan every 24 hours. Attached volumes pass. LOW, COST; reports only. acme:ebs-unattached@1",
+   "fails": [
+    "no-schedule"
+   ]
+  },
+  {
+   "output": "- EBS volumes with no `Attachments` are flagged by a weekly scan. Attached volumes pass. LOW, COST; reports only. acme:ebs-unattached@1",
+   "fails": [
+    "no-schedule"
+   ]
+  },
+  {
+   "output": "- EBS volumes with no `Attachments` are flagged by a scheduled scan that reacts to `DetachVolume`. Attached volumes pass. LOW, COST; reports only. acme:ebs-unattached@1",
+   "fails": [
+    "no-schedule"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "guard",
+  "prompt": "tag the orders database with backup-plan = daily so AWS Backup picks it up",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Adds the tag and changes nothing but the tags. The missing cost-center/data-classification tags are a free fix with values already in the repo (local.finops_tags): adding them (and saying so) or saying they're missing both pass; inventing values fails. Leaves the database's encryption alone (turning it on would replace the database; reporting that is eval 15's). Meant not to discriminate. The repo's data-classification may be wrong for this data: if the agent sets it, the reply says so."
+}

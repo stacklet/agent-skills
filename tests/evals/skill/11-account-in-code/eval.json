@@ -1,0 +1,9 @@
+{
+  "kind": "discriminating",
+  "prompt": "add a terraform postgres RDS instance for the ledger service to this repo, small instance class, multi-az.",
+  "setup": "repo contains fixture/ledger-repo/providers.tf, whose provider assumes a role in account 111111111111; the cache holds that account's lookup (account_0.json: it is in aws-payments), and there is no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "ledger-repo"
+  },
+  "expected_output": "Finds the account in the provider block and records it in scope.json; PCI-DSS AWS then applies through the account without asking about card data: backup_retention_period >= 35, encrypted, private, plus required tags."
+}

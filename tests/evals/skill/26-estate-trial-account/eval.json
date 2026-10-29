@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "add terraform for an SQS queue for the lab's ingest jobs to this repo, with a dead-letter queue.",
+  "setup": "repo contains fixture/estate-trial-repo/providers.tf, whose provider assumes a role in account 456789012345; the cache holds that account's lookup: it is in the Trial Remediation group, whose collection (ignored by default) deletes S3 buckets, EC2 instances and SQS queues without an Owner tag, and in the dev alpha wave",
+  "start": {
+    "copy": "estate-trial-repo"
+  },
+  "expected_output": "Finds the account in the provider block and records it; the trial remediation then applies through it: every queue gets an Owner tag, and the reply warns that queues without one are deleted. The wave-rolled tags (mrd:owner, mrd:service, mrd:environment) apply too."
+}

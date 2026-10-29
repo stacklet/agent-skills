@@ -1,0 +1,11 @@
+{
+  "shape": "Many hand-picked groups beside org and OU groups across seven orgs; one personally named collection bound to an OU holding 91% of the AWS accounts.",
+  "expect": {
+    "collections": {
+      "jade30-onyx30": [
+        "ask",
+        "applies"
+      ]
+    }
+  }
+}

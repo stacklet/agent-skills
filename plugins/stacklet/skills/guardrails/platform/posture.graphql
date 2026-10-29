@@ -1,0 +1,24 @@
+# One unpaginated call: the whole binding posture, for the digest the assessment is made from. Each
+# collection comes with its size only: what it binds is fetched for the collections a repo needs
+# (collection.graphql). A provider's account total comes from its "all accounts" group
+# (dynamicFilter ""); one without needs active_accounts.graphql. Save the response as posture.json
+# for ingest.py (if the MCP tool saved a large result to a file, copy that file).
+{
+  platform { urls { console } }
+  cloudOrganizations(first: 1000) { pageInfo { hasNextPage } edges { node { key name provider } } }
+  bindingPosture {
+    accountGroups {
+      uuid name provider description dynamicFilter
+      accountMappings(first: 1) { pageInfo { total } }
+    }
+    policyCollections {
+      uuid name provider description
+      policyMappings(first: 1) { pageInfo { total } }
+    }
+    bindings {
+      uuid name description lastDeployed
+      accountGroup { uuid }
+      policyCollection { uuid }
+    }
+  }
+}

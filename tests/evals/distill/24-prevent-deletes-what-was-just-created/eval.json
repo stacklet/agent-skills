@@ -1,0 +1,147 @@
+{
+ "about": "A family of one check as collections in the wild publish it: inform (a scan that reports), rtc (reports shortly after the create call) and prevent (deletes the new instance shortly after the create call). One bullet carrying each variant: the prevent variant deletes what was just created, which is what code creating an unencrypted instance meets; nothing blocks the call.",
+ "resource_type": "aws.rds",
+ "policies": [
+  {
+   "name": "acme:rds-unencrypted-inform",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "rds-unencrypted-inform",
+    "resource": "aws.rds",
+    "filters": [
+     {
+      "type": "value",
+      "key": "StorageEncrypted",
+      "op": "ne",
+      "value": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:rds-unencrypted-rtc",
+   "version": 1,
+   "severity": "high",
+   "mode": "cloudtrail",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "rds-unencrypted-rtc",
+    "resource": "aws.rds",
+    "mode": {
+     "type": "cloudtrail",
+     "events": [
+      {
+       "event": "CreateDBInstance",
+       "ids": "requestParameters.dBInstanceIdentifier",
+       "source": "rds.amazonaws.com"
+      }
+     ]
+    },
+    "filters": [
+     {
+      "type": "value",
+      "key": "StorageEncrypted",
+      "op": "ne",
+      "value": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:rds-unencrypted-prevent",
+   "version": 1,
+   "severity": "high",
+   "mode": "cloudtrail",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "rds-unencrypted-prevent",
+    "resource": "aws.rds",
+    "mode": {
+     "type": "cloudtrail",
+     "events": [
+      {
+       "event": "CreateDBInstance",
+       "ids": "requestParameters.dBInstanceIdentifier",
+       "source": "rds.amazonaws.com"
+      }
+     ]
+    },
+    "filters": [
+     {
+      "type": "value",
+      "key": "StorageEncrypted",
+      "op": "ne",
+      "value": true
+     }
+    ],
+    "actions": [
+     {
+      "type": "delete"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "deleted-after-create",
+   "policies": [
+    "acme:rds-unencrypted-prevent"
+   ],
+   "says": [
+    "\\b(deletes?|deleted|deleting|deletion)\\b",
+    "CreateDBInstance",
+    "\\b(after|shortly|once|following)\\b"
+   ],
+   "not": [
+    "(?<!not )(?<!never )(?<!n't )(?<!no )(?<!than )(?<!without )\\b(block\\w*|den(y|ies|ied)|refus\\w*|reject\\w*|disallow\\w*)\\b|\\bprevents? (it|the instance|the call|creation|creating)\\b|\\b(can.?t|cannot|won.?t) be created\\b"
+   ]
+  },
+  {
+   "id": "one-family-one-bullet",
+   "policies": [
+    "acme:rds-unencrypted-inform",
+    "acme:rds-unencrypted-rtc",
+    "acme:rds-unencrypted-prevent"
+   ],
+   "together": true
+  }
+ ],
+ "controls": [
+  {
+   "output": "- RDS instances whose `StorageEncrypted` is not true are flagged. Encrypted instances pass. HIGH, CIS; the inform policy runs on a scheduled scan and the rtc policy shortly after `CreateDBInstance`, both reporting only; the prevent policy also runs shortly after `CreateDBInstance` and deletes the new instance. acme:rds-unencrypted-inform@1, acme:rds-unencrypted-rtc@1, acme:rds-unencrypted-prevent@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances whose `StorageEncrypted` is not true are flagged. Encrypted instances pass. HIGH, CIS; scheduled scans and `CreateDBInstance` events report it. acme:rds-unencrypted-inform@1, acme:rds-unencrypted-rtc@1, acme:rds-unencrypted-prevent@1",
+   "fails": [
+    "deleted-after-create"
+   ]
+  },
+  {
+   "output": "- Unencrypted RDS instances cannot be created: `CreateDBInstance` is blocked, and any that slip through are deleted after the call. HIGH, CIS. acme:rds-unencrypted-inform@1, acme:rds-unencrypted-rtc@1, acme:rds-unencrypted-prevent@1",
+   "fails": [
+    "deleted-after-create"
+   ]
+  },
+  {
+   "output": "- RDS instances whose `StorageEncrypted` is not true are flagged. Encrypted instances pass. HIGH, CIS; the prevent policy deletes the new instance shortly after `CreateDBInstance`: it is removed after it is created, not blocked before. acme:rds-unencrypted-inform@1, acme:rds-unencrypted-rtc@1, acme:rds-unencrypted-prevent@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances whose `StorageEncrypted` is not true are flagged by a scheduled scan. Encrypted instances pass. HIGH, CIS; reports only. acme:rds-unencrypted-inform@1\n- RDS instances whose `StorageEncrypted` is not true are flagged shortly after `CreateDBInstance`. Encrypted instances pass. HIGH, CIS; reports only. acme:rds-unencrypted-rtc@1\n- RDS instances whose `StorageEncrypted` is not true are deleted shortly after `CreateDBInstance`. Encrypted instances pass. HIGH, CIS. acme:rds-unencrypted-prevent@1",
+   "fails": [
+    "one-family-one-bullet"
+   ]
+  }
+ ]
+}

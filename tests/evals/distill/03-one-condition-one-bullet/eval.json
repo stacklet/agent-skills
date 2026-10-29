@@ -1,0 +1,172 @@
+{
+ "about": "Three policies flag exactly the same thing at different severities and frameworks, and one of them puts the block back: one bullet, carrying what differs, the action above all.",
+ "resource_type": "aws.s3",
+ "policies": [
+  {
+   "name": "cis:s3-public-block",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "s3-public-block",
+    "resource": "aws.s3",
+    "description": "Block public ACLs on buckets.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "BlockPublicAcls": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "soc2:s3-public-block",
+   "version": 3,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "SOC2"
+   ],
+   "source": {
+    "name": "s3-public-block",
+    "resource": "aws.s3",
+    "description": "Public access must be blocked.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "BlockPublicAcls": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:s3-public-block-enforce",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "s3-public-block-enforce",
+    "resource": "aws.s3",
+    "description": "Re-enable the public access block.",
+    "filters": [
+     {
+      "type": "check-public-block",
+      "BlockPublicAcls": false
+     }
+    ],
+    "actions": [
+     {
+      "type": "set-public-block",
+      "BlockPublicAcls": true
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "one-bullet",
+   "together": true,
+   "policies": [
+    "cis:s3-public-block",
+    "soc2:s3-public-block",
+    "acme:s3-public-block-enforce"
+   ],
+   "says": [
+    "BlockPublicAcls",
+    "\\bhigh\\b",
+    "\\bmedium\\b",
+    "\\bCIS\\b",
+    "\\bSOC ?2\\b",
+    "set-public-block|\\b(one|ORG|acme|third|another|enforc\\w*|REF)\\b(?:(?!\\.\\s).)*\\b(sets|setting|turns|changes|re-?enables|restores|puts)\\b|\\b(is|are|gets?) (automatically )?(set|turned) (back )?(on|to `?true`?)`?[^.;]*?\\b(by|on|after|when|during|once)\\b|\\b(is|are|gets?) (automatically )?(re-?enabled|restored|put back)\\b"
+   ],
+   "not": [
+    "\\b(critical|high|medium|low)\\b[^.;]*\\b(critical|high|medium|low)\\b[^.;]*;\\s*(reports? only|only reports?)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- S3 buckets whose public access block leaves `BlockPublicAcls` off are flagged. Buckets with `BlockPublicAcls` on pass. HIGH (CIS, ORG), MEDIUM (SOC2); one policy turns `BlockPublicAcls` back on, the others report only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets whose public access block has `PublicAccessBlockConfiguration.BlockPublicAcls` set to false are flagged, and buckets with it set to true pass. Under cis:s3-public-block@1 (high, CIS) and soc2:s3-public-block@3 (medium, SOC2) the finding is only reported. Under acme:s3-public-block-enforce@1 (high, ORG) the bucket's `PublicAccessBlockConfiguration.BlockPublicAcls` is set to true on the next scheduled scan. cis:s3-public-block@1, soc2:s3-public-block@3, acme:s3-public-block-enforce@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` set to false are flagged. Buckets with it true pass. High under CIS and ORG, medium under SOC2. The CIS and SOC2 policies only report. The ORG policy changes the bucket by setting `BlockPublicAcls` to true on each flagged bucket. cis:s3-public-block@1, soc2:s3-public-block@3, acme:s3-public-block-enforce@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets whose public access block has `BlockPublicAcls` set to `false` are flagged, and buckets where it is `true` pass. The CIS (high) and SOC2 (medium) policies only report; the ORG policy (high) sets `BlockPublicAcls` to `true` on the bucket after the scan finds it. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with `PublicAccessBlockConfiguration.BlockPublicAcls` set to `false` are flagged. Buckets with it `true` pass. HIGH, CIS; reports only. cis:s3-public-block@1. MEDIUM, SOC2; reports only. soc2:s3-public-block@3. HIGH, ORG; sets `PublicAccessBlockConfiguration.BlockPublicAcls` to `true` on the bucket. acme:s3-public-block-enforce@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. HIGH, CIS; reports only. cis:s3-public-block@1\n- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. MEDIUM, SOC2; reports only. soc2:s3-public-block@3\n- S3 buckets with `BlockPublicAcls` off are flagged. Buckets with it on pass. HIGH, ORG; turns it back on. acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` set to `false` are flagged; buckets with it set to `true` pass. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- S3 buckets whose public access block sets `BlockPublicAcls` to true pass, and those with it false are flagged. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- S3 buckets that don't turn `BlockPublicAcls` on are flagged. Buckets that do pass. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` set to false are flagged. Buckets with it true pass. HIGH, CIS and ORG; the CIS policy reports only, and the ORG policy sets `BlockPublicAcls` to true on the bucket. MEDIUM, SOC2; reports only. cis:s3-public-block@1, acme:s3-public-block-enforce@1, soc2:s3-public-block@3",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` set to false are flagged. Buckets with it enabled pass. HIGH (CIS, ORG), MEDIUM (SOC2). cis:s3-public-block@1 and soc2:s3-public-block@3 only report; acme:s3-public-block-enforce@1 runs in pull mode and sets `BlockPublicAcls` to true on the flagged bucket. cis:s3-public-block@1, soc2:s3-public-block@3, acme:s3-public-block-enforce@1",
+   "fails": []
+  },
+  {
+   "output": "- S3 buckets where `BlockPublicAcls` is set to false are flagged; buckets where it is set to true pass. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- S3 buckets whose public access block leaves `BlockPublicAcls` off are flagged; buckets pass once the block is re-enabled. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- S3 buckets with `BlockPublicAcls` false are flagged; buckets where it is set to true by the owner pass. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  },
+  {
+   "output": "- Under CIS and ORG, buckets whose block sets `BlockPublicAcls` to true pass, and those with it false are flagged. HIGH (CIS, ORG), MEDIUM (SOC2); reports only. cis:s3-public-block@1 soc2:s3-public-block@3 acme:s3-public-block-enforce@1",
+   "fails": [
+    "one-bullet"
+   ]
+  }
+ ]
+}

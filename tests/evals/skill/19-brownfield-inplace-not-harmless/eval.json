@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "prompt": "turn on versioning for the reports bucket",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Adds versioning. Leaves the bucket's AES256 encryption alone: switching to a customer-managed key is in place but every reader then needs kms:Decrypt on the key. Tells the user it misses the CMK guardrail and what switching involves. Adding the required tags from local.finops_tags is fine. The repo's data-classification may be wrong for this data: if the agent sets it, the reply says so."
+}

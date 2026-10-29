@@ -1,0 +1,74 @@
+{
+ "about": "The filter flags `MetadataOptions.HttpTokens` `optional`: what passes is everything it doesn't flag (any instance requiring IMDSv2 tokens, the metadata service still on), not a stricter ideal such as the service turned off (which the policy's description, never shown to the model, asks for). Not the prompt's own example's shape (a boolean whose false is flagged).",
+ "resource_type": "aws.ec2",
+ "policies": [
+  {
+   "name": "acme:ec2-imdsv2",
+   "version": 2,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "SOC2"
+   ],
+   "source": {
+    "name": "ec2-imdsv2",
+    "resource": "aws.ec2",
+    "description": "Instances should not expose the instance metadata service at all.",
+    "filters": [
+     {
+      "MetadataOptions.HttpTokens": "optional"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "follows-the-filter",
+   "policies": [
+    "acme:ec2-imdsv2"
+   ],
+   "says": [
+    "HttpTokens"
+   ],
+   "not": [
+    "(HttpEndpoint|metadata service|IMDS)`?\\s+(is |are )?(set to |turned |left )?`?(enabled|on)`?[^.;]*\\b(are |is )?flagged|\\bonly\\b[^.;]*\\b(HttpEndpoint|metadata service|IMDS)\\b[^.;]*\\b(disabled|off)\\b[^.;]*\\bpass",
+    "HttpTokens`?\\s+(set to |of )?`?required`?\\s+(are|is) flagged"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- EC2 instances with `MetadataOptions.HttpTokens` set to `optional` are flagged. Instances requiring tokens (IMDSv2) pass, with the metadata service still on. HIGH, SOC2; reports only. acme:ec2-imdsv2@2",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances whose `HttpTokens` is `optional` (IMDSv1 allowed) are flagged. Any instance with `HttpTokens` `required` passes, whether or not `HttpEndpoint` is enabled. HIGH, SOC2; reports only. acme:ec2-imdsv2@2",
+   "fails": []
+  },
+  {
+   "output": "- EC2 instances with the metadata service enabled are flagged, even with `HttpTokens` `required`. Instances with the endpoint disabled pass. HIGH, SOC2; reports only. acme:ec2-imdsv2@2",
+   "fails": [
+    "follows-the-filter"
+   ]
+  },
+  {
+   "output": "- EC2 instances with `HttpTokens` optional are flagged; only instances with the metadata service disabled pass. HIGH, SOC2; reports only. acme:ec2-imdsv2@2",
+   "fails": [
+    "follows-the-filter"
+   ]
+  },
+  {
+   "output": "- EC2 instances with `HttpTokens` required are flagged. Instances allowing IMDSv1 pass. HIGH, SOC2; reports only. acme:ec2-imdsv2@2",
+   "fails": [
+    "follows-the-filter"
+   ]
+  },
+  {
+   "output": "- EC2 instances with `HttpTokens` `optional` are flagged. Only instances with `HttpTokens` required and IMDS turned off pass. HIGH, SOC2; reports only. acme:ec2-imdsv2@2",
+   "fails": [
+    "follows-the-filter"
+   ]
+  }
+ ]
+}

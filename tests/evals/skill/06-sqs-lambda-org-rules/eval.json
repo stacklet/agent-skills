@@ -1,0 +1,5 @@
+{
+  "kind": "discriminating",
+  "prompt": "terraform for an sqs queue plus a python lambda that consumes it and generates image thumbnails. keep it minimal, I'll wire the iam later.",
+  "expected_output": "Queue has a redrive policy / DLQ (maxReceiveCount <= 5) and a CMK kms_master_key_id; lambda has tracing_config mode Active and reserved_concurrent_executions; all resources tagged cost-center and data-classification."
+}

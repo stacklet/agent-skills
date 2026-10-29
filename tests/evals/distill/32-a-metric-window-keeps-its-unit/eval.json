@@ -1,0 +1,140 @@
+{
+ "about": "Azure's `metric` filter takes `timeframe` in hours: VMs averaging 10% CPU or less over 336 hours (two weeks) are deleted, and those between 10% and 40% stopped. Four runs of five on the collection it came from said 'over the 336 timeframe', with no unit, which leaves an agent unable to tell how long a quiet VM survives. The bullets give the window with its unit.",
+ "resource_type": "azure.vm",
+ "policies": [
+  {
+   "name": "acme:vm-idle-cpu-inform",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "vm-idle-cpu-inform",
+    "resource": "azure.vm",
+    "filters": [
+     {
+      "type": "metric",
+      "metric": "Percentage CPU",
+      "aggregation": "average",
+      "timeframe": 336,
+      "op": "le",
+      "threshold": 10
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:vm-idle-cpu-delete",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "vm-idle-cpu-delete",
+    "resource": "azure.vm",
+    "filters": [
+     {
+      "type": "metric",
+      "metric": "Percentage CPU",
+      "aggregation": "average",
+      "timeframe": 336,
+      "op": "le",
+      "threshold": 10
+     }
+    ],
+    "actions": [
+     {
+      "type": "delete"
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:vm-underused-cpu-inform",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "vm-underused-cpu-inform",
+    "resource": "azure.vm",
+    "filters": [
+     {
+      "type": "metric",
+      "metric": "Percentage CPU",
+      "aggregation": "average",
+      "timeframe": 336,
+      "op": "le",
+      "threshold": 40
+     },
+     {
+      "type": "metric",
+      "metric": "Percentage CPU",
+      "aggregation": "average",
+      "timeframe": 336,
+      "op": "gt",
+      "threshold": 10
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:vm-underused-cpu-stop",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "vm-underused-cpu-stop",
+    "resource": "azure.vm",
+    "filters": [
+     {
+      "type": "metric",
+      "metric": "Percentage CPU",
+      "aggregation": "average",
+      "timeframe": 336,
+      "op": "le",
+      "threshold": 40
+     },
+     {
+      "type": "metric",
+      "metric": "Percentage CPU",
+      "aggregation": "average",
+      "timeframe": 336,
+      "op": "gt",
+      "threshold": 10
+     }
+    ],
+    "actions": [
+     {
+      "type": "stop"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "window-with-its-unit",
+   "policies": [
+    "acme:vm-idle-cpu-delete"
+   ],
+   "says": [
+    "\\b336[- ]?(hours?|h)\\b|\\b14[- ]days?\\b|\\bfourteen days\\b|\\btwo weeks\\b|\\b2 weeks\\b",
+    "\\bdelet"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- VMs averaging 10% CPU or less over 336 hours (two weeks) are flagged; VMs above that pass. HIGH; scheduled scan; one policy reports, the other deletes the VM. acme:vm-idle-cpu-inform@1, acme:vm-idle-cpu-delete@1\n- VMs averaging above 10% and at most 40% CPU over the same 336 hours are flagged. MEDIUM; scheduled scan; one policy reports, the other stops the VM. acme:vm-underused-cpu-inform@1, acme:vm-underused-cpu-stop@1",
+   "fails": []
+  },
+  {
+   "output": "- VMs whose average Percentage CPU is 10 or below over the 336 timeframe are flagged. HIGH; scheduled scan; one policy reports, the other deletes the VM. acme:vm-idle-cpu-inform@1, acme:vm-idle-cpu-delete@1\n- VMs averaging above 10 and at most 40 over the 336 timeframe are flagged. MEDIUM; scheduled scan; one reports, the other stops the VM. acme:vm-underused-cpu-inform@1, acme:vm-underused-cpu-stop@1",
+   "fails": [
+    "window-with-its-unit"
+   ]
+  }
+ ]
+}

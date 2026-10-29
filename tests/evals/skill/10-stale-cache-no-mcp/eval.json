@@ -1,0 +1,9 @@
+{
+  "kind": "discriminating",
+  "prompt": "need a terraform sqs queue for our order-events pipeline, nothing fancy",
+  "setup": "the cache's posture was ingested long ago (meta.refreshed_at = 2020-01-01T00:00:00Z) and, as in every run, there is no Stacklet MCP server, so the agent can't refresh",
+  "start": {
+    "posture_refreshed_at": "2020-01-01T00:00:00Z"
+  },
+  "expected_output": "Notices the posture is old and tries to refresh; finding no Stacklet MCP server, says so in a line and carries on with the cached guardrails (redrive policy maxReceiveCount <= 5, CMK, required tags). Doesn't block or ask."
+}

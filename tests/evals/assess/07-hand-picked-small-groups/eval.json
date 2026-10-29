@@ -1,0 +1,15 @@
+{
+  "shape": "Many small hand-picked groups and a hand-picked list of 97 accounts: reached through account lookups, not questions; ten empty collections bound: two to (nearly) all of a provider's accounts, three to a group of 42% of the AWS accounts, five to groups of at most seven.",
+  "expect": {
+    "collections": {
+      "aws-ecr-tagging": [
+        "ignore",
+        "ask"
+      ],
+      "Key Resource Auto Tagging Policies": [
+        "ignore",
+        "ask"
+      ]
+    }
+  }
+}

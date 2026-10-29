@@ -1,0 +1,133 @@
+{
+ "about": "Custodian's `offhour` and `onhour` filters, given a `tag`, act only on resources that carry it (`opt-out` defaults to false): an instance without the schedule tag is never stopped or started, and the 19:00 and 07:00 hours are the schedule's defaults for a tagged one. Two of five runs on the collection it came from read the hours as applying to every running instance unless its tag says otherwise, which would tell an agent that leaving the tag off doesn't keep an instance running, when it is exactly what does. The bullets say only instances carrying the tag are stopped and started.",
+ "resource_type": "aws.ec2",
+ "policies": [
+  {
+   "name": "acme:ec2-power-schedule-stop",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "ec2-power-schedule-stop",
+    "resource": "aws.ec2",
+    "filters": [
+     {
+      "State.Name": "running"
+     },
+     {
+      "not": [
+       {
+        "or": [
+         {
+          "tag:acme_power_schedule": "NONE"
+         },
+         {
+          "tag:acme_keep_running": "present"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "offhour",
+      "tag": "acme_power_schedule",
+      "default_tz": "ct",
+      "offhour": 19
+     }
+    ],
+    "actions": [
+     "stop"
+    ]
+   }
+  },
+  {
+   "name": "acme:ec2-power-schedule-start",
+   "version": 1,
+   "severity": null,
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "ec2-power-schedule-start",
+    "resource": "aws.ec2",
+    "filters": [
+     {
+      "State.Name": "stopped"
+     },
+     {
+      "not": [
+       {
+        "or": [
+         {
+          "tag:acme_power_schedule": "NONE"
+         },
+         {
+          "tag:acme_keep_stopped": "present"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "onhour",
+      "tag": "acme_power_schedule",
+      "default_tz": "ct",
+      "onhour": 7
+     }
+    ],
+    "actions": [
+     "start"
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "only-tagged-instances",
+   "policies": [
+    "acme:ec2-power-schedule-stop",
+    "acme:ec2-power-schedule-start"
+   ],
+   "says": [
+    "\\b(without|lacking|with no|missing|no)\\b[^.;]{0,40}`?acme_power_schedule`?[^.;]{0,140}\\b(pass|passes|never|aren't|are not|is not|isn't|not (stopped|started|flagged))\\b|\\bonly\\b[^.;]{0,80}\\b(carry|carries|carrying|tagged|with|have|has)\\b[^.;]{0,30}`?acme_power_schedule`?|`?acme_power_schedule`?[^.;]{0,60}\\b(is|are) (required|needed)\\b|\\bwhen\\b[^.;]{0,30}`?acme_power_schedule`?[^.;]{0,30}\\b(is )?(set|present)\\b|\\buntagged\\b[^.;]{0,60}\\b(pass|passes|never|aren't|are not)\\b|\\bwithout (the|that|this) (schedule |power[- ]schedule )?tag\\b[^.;]{0,120}\\b(pass|passes|never)\\b|\\bwithout `?acme_power_schedule`?[^.;]{0,300}\\b(pass|passes)\\b"
+   ],
+   "not": [
+    "\\bor (its|the) default\\b",
+    "\\bunless (that|the|this|its) (tag|schedule) (sets|gives|names|overrides)",
+    "\\b(whatever|regardless of) (their|its|the) tags?\\b|\\bonly\\b[^.;]{0,80}`?NONE`?[^.;]{0,20}\\bpass"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- Running EC2 instances tagged `acme_power_schedule` (with any value but `NONE`) are flagged in their schedule's off-hour, 19:00 Central by default, unless tagged `acme_keep_running`; stopped instances so tagged are flagged in the 07:00 on-hour unless tagged `acme_keep_stopped`. Instances without `acme_power_schedule` pass and are never stopped or started. No severity; scheduled scan, timing set by the platform; stops, then starts, the instance. acme:ec2-power-schedule-stop@1, acme:ec2-power-schedule-start@1",
+   "fails": []
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- Running EC2 instances whose `acme_power_schedule` schedule puts them in the 19:00 off-hour in US Central time (the hour applies unless that tag sets its own schedule) are flagged, and stopped ones in the 07:00 on-hour, unless `acme_power_schedule` is `NONE` or a keep tag is present. No severity; scheduled scan; stops, then starts, the instance. acme:ec2-power-schedule-stop@1, acme:ec2-power-schedule-start@1",
+   "fails": [
+    "only-tagged-instances"
+   ]
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- Running EC2 instances inside the 19:00 off-hour window (Central time, from the `acme_power_schedule` tag or its default) are flagged, and stopped ones in the 07:00 on-hour, unless `acme_power_schedule` is `NONE` or a keep tag is present. No severity; scheduled scan; stops, then starts, the instance. acme:ec2-power-schedule-stop@1, acme:ec2-power-schedule-start@1",
+   "fails": [
+    "only-tagged-instances"
+   ]
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- Running EC2 instances that carry the `acme_power_schedule` tag with any value other than `NONE`, and lack the `acme_keep_running` tag, are flagged during the 19:00 Central hour; stopped ones so tagged in the 07:00 hour unless tagged `acme_keep_stopped`. Instances tagged `NONE` or with a keep tag pass. Untagged instances pass and are never acted on. No severity; scheduled scan; stops, then starts, the instance. acme:ec2-power-schedule-stop@1, acme:ec2-power-schedule-start@1",
+   "fails": []
+  },
+  {
+   "output": "- Running EC2 instances whose `acme_power_schedule` tag puts them in their off hour, 19:00 Central by default, are flagged. Instances without that tag pass and are never acted on, and so do instances whose `acme_power_schedule` value is `NONE`. No severity; scheduled scan; stops the instance, and the start policy starts it in its on hour. acme:ec2-power-schedule-stop@1, acme:ec2-power-schedule-start@1",
+   "fails": []
+  },
+  {
+   "output": "## Runtime-only (may change resources outside your control)\n- Running EC2 instances are stopped in the 19:00 Central off-hour whatever their tags; only instances tagged `acme_power_schedule` with `NONE` pass. Stopped ones are started at 07:00. No severity; scheduled scan; stops, then starts, the instance. acme:ec2-power-schedule-stop@1, acme:ec2-power-schedule-start@1",
+   "fails": [
+    "only-tagged-instances"
+   ]
+  }
+ ]
+}

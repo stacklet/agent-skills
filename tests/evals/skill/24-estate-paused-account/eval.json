@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "add terraform for an elasticache replication group for the analytics cache to this repo: redis-compatible, two nodes, the private subnets are in var.private_subnet_ids.",
+  "setup": "repo contains fixture/estate-paused-repo/providers.tf, whose provider assumes a role in account 345678901234; the cache holds that account's lookup: tagged GuardrailPause, so in no wave group, and only the all-accounts and org-wide collections reach it",
+  "start": {
+    "copy": "estate-paused-repo"
+  },
+  "expected_output": "Finds the account in the provider block, records it, and from its lookup (the GuardrailPause tag, no wave groups) answers the opt-out question yes, since it is the only account the code deploys into; says the wave-rolled guardrails (Valkey, mrd: tags, encryption enforcement) don't reach this account rather than presenting them as applying."
+}

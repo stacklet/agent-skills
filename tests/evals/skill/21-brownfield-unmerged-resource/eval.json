@@ -1,0 +1,15 @@
+{
+  "kind": "discriminating",
+  "prompt": "bump the order notifications queue's retention to 7 days",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run. The repo is on a feature branch whose one commit (not on main, so never deployed) adds fixture/orders-branch/notifications.tf: an SQS queue with no DLQ, no customer-managed key and no required tags.",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra",
+    "branch": {
+      "name": "feature/order-notifications",
+      "copy": "orders-branch",
+      "commit": "add order notifications"
+    }
+  },
+  "expected_output": "Sets message_retention_seconds to 604800 on the notifications queue. Because the queue was added on this branch and has never been deployed, it is new, not existing: its fixes cost nothing live, so it gets the guardrails (customer-managed key; a DLQ with maxReceiveCount <= 5; the required tags), and the reply says why. A session may weigh the change's scope differently and leave a fix out, so long as the reply reports the gap it leaves. The repo's data-classification may be wrong for this data: if the agent sets it, the reply says so. No other existing resource changes."
+}

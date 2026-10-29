@@ -1,0 +1,110 @@
+{
+ "about": "Backup retention at two thresholds by region (14 days in eu-west-1, 7 elsewhere, by region conditions on a regional type): one bullet, or one per region naming the other.",
+ "resource_type": "aws.rds",
+ "policies": [
+  {
+   "name": "acme:rds-retention-eu",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "GDPR"
+   ],
+   "source": {
+    "name": "rds-retention-eu",
+    "resource": "aws.rds",
+    "description": "EU databases keep two weeks of backups.",
+    "conditions": [
+     {
+      "type": "value",
+      "key": "region",
+      "value": "eu-west-1"
+     }
+    ],
+    "filters": [
+     {
+      "type": "value",
+      "key": "BackupRetentionPeriod",
+      "op": "lt",
+      "value": 14
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:rds-retention",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "rds-retention",
+    "resource": "aws.rds",
+    "description": "Databases keep a week of backups.",
+    "conditions": [
+     {
+      "type": "value",
+      "key": "region",
+      "op": "ne",
+      "value": "eu-west-1"
+     }
+    ],
+    "filters": [
+     {
+      "type": "value",
+      "key": "BackupRetentionPeriod",
+      "op": "lt",
+      "value": 7
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "joined-or-linked",
+   "policies": [
+    "acme:rds-retention-eu",
+    "acme:rds-retention"
+   ],
+   "says": [
+    "BackupRetentionPeriod",
+    "eu-west-1",
+    "\\b14\\b",
+    "\\b7\\b"
+   ],
+   "linked": {
+    "acme:rds-retention-eu": [
+     "\\b7\\b|\\bseven\\b|\\ba week\\b"
+    ],
+    "acme:rds-retention": [
+     "\\b14\\b|\\bfourteen\\b|\\btwo weeks\\b"
+    ]
+   }
+  }
+ ],
+ "controls": [
+  {
+   "output": "- RDS instances with `BackupRetentionPeriod` under 14 in eu-west-1 (HIGH, GDPR), or under 7 in other regions (MEDIUM, ORG), are flagged. Instances meeting their region's minimum pass. Reports only. acme:rds-retention-eu@1 acme:rds-retention@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances in eu-west-1 with `BackupRetentionPeriod` under 14 are flagged; elsewhere the minimum is 7. Others pass. HIGH, GDPR; reports only. acme:rds-retention-eu@1\n- RDS instances outside eu-west-1 with `BackupRetentionPeriod` under 7 are flagged; eu-west-1 needs 14. Others pass. MEDIUM, ORG; reports only. acme:rds-retention@1",
+   "fails": []
+  },
+  {
+   "output": "- RDS instances in eu-west-1 with `BackupRetentionPeriod` under 14 are flagged. Others pass. HIGH, GDPR; reports only. acme:rds-retention-eu@1\n- RDS instances with `BackupRetentionPeriod` under 7 are flagged. Others pass. MEDIUM, ORG; reports only. acme:rds-retention@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  },
+  {
+   "output": "- RDS instances in eu-west-1 with `BackupRetentionPeriod` under 14 are flagged; instances outside eu-west-1 pass this check. HIGH, GDPR; reports only. acme:rds-retention-eu@1\n- RDS instances outside eu-west-1 with `BackupRetentionPeriod` under 7 are flagged. Instances in eu-west-1 pass this check. MEDIUM, ORG; reports only. acme:rds-retention@1",
+   "fails": [
+    "joined-or-linked"
+   ]
+  }
+ ]
+}

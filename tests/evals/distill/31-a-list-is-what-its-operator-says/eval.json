@@ -1,0 +1,99 @@
+{
+ "about": "Premium disks whose ids are `in` a list fetched from a URL are changed to Standard. The URL's path says `opted-out`, but the operator decides: the listed disks are the ones converted. On the collection it came from, three runs of five took the name over the operator, one inverting it (disks NOT on the list are converted) and two calling it an opt-out list while saying listed disks are flagged, which reads as converting the disks that opted out. The bullet says disks in the list are converted, never that unlisted disks are. (Twenty runs at this prompt all kept the operator, most calling it the opted-out list: a guard.)",
+ "resource_type": "azure.disk",
+ "policies": [
+  {
+   "name": "acme:disk-premium-to-standard",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [],
+   "source": {
+    "name": "disk-premium-to-standard",
+    "resource": "azure.disk",
+    "filters": [
+     {
+      "type": "value",
+      "key": "sku.name",
+      "op": "eq",
+      "value": "Premium_LRS"
+     },
+     {
+      "type": "value",
+      "key": "id",
+      "op": "in",
+      "value_from": {
+       "url": "https://acmeconfig.example.net/opted-out-disk-ids/disks.json",
+       "format": "json",
+       "expr": "[].id"
+      }
+     }
+    ],
+    "actions": [
+     {
+      "type": "modify-disk-type",
+      "new_sku": "Standard_LRS",
+      "retries": 2,
+      "delay": 10
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "listed-disks-converted",
+   "policies": [
+    "acme:disk-premium-to-standard"
+   ],
+   "says": [
+    "\\b(in|on|appears? in|listed in|named in)\\b[^.;]{0,50}\\blist\\b|\\b(in|on|appears? in|listed in|named in)\\b[^.;]{0,50}\\b(file|csv)\\b"
+   ],
+   "not": [
+    "\\bnot (in|on) (the|that|this)[^.;]{0,40}\\blist\\b[^.;]{0,80}\\b(flagged|changed|converted)",
+    "(?<!not )(?<!n't )\\b(in|on)\\b((?!\\bnot\\b)[^.;]){0,50}\\blist\\b[^.;]{0,60}\\b(left alone|pass(es)?|are(n't| not) (changed|converted|flagged)|skipped|exempt)\\b",
+    "\\b(every other|all other|the rest|others)\\b[^.;]{0,60}\\b(converted|changed|flagged)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Azure managed disks with `sku.name` `Premium_LRS` whose `id` is in the list loaded from an external URL are flagged. Disks not in that list, and disks of any other SKU, pass. HIGH; scheduled scan; changes the disk to `Standard_LRS`, retrying twice. acme:disk-premium-to-standard@1",
+   "fails": []
+  },
+  {
+   "output": "- Premium_LRS disks whose `id` appears in the external opted-out disk list are flagged. Premium_LRS disks not on that list pass. HIGH; scheduled scan; changes them to Standard_LRS. acme:disk-premium-to-standard@1",
+   "fails": []
+  },
+  {
+   "output": "- Premium_LRS disks whose `id` is not on the opted-out list of disk ids are flagged and changed to Standard_LRS. Disks on that list pass. HIGH; scheduled scan. acme:disk-premium-to-standard@1",
+   "fails": [
+    "listed-disks-converted"
+   ]
+  },
+  {
+   "output": "- Azure disks with `sku.name` `Premium_LRS` whose `id` appears in the external disk ID file the filter loads are flagged. Premium_LRS disks not in that file pass, and disks of any other SKU pass. HIGH, no compliance framework; scheduled scan; changes the disk's SKU to `Standard_LRS`. acme:disk-premium-to-standard@1",
+   "fails": []
+  },
+  {
+   "output": "- Premium_LRS disks in the opted-out list are left alone; every other Premium_LRS disk is flagged and changed to Standard_LRS. HIGH; scheduled scan. acme:disk-premium-to-standard@1",
+   "fails": [
+    "listed-disks-converted"
+   ]
+  },
+  {
+   "output": "- Premium_LRS disks in the opted-out list pass; the rest are converted to Standard_LRS. HIGH; scheduled scan. acme:disk-premium-to-standard@1",
+   "fails": [
+    "listed-disks-converted"
+   ]
+  },
+  {
+   "output": "- Premium_LRS managed disks whose `id` appears in the opt-out list fetched at run time from an external JSON file (`[].id`) are flagged, so a disk the agent defines as Premium_LRS will be changed to Standard_LRS after deployment if its ID is on that list. Disks on any other SKU, and Premium_LRS disks not on that list, pass. HIGH, no compliance framework listed; scheduled pull scan, timing set by the platform; the action changes the disk SKU to Standard_LRS, with 2 retries and 10 seconds between retries. acme:disk-premium-to-standard@1",
+   "fails": []
+  },
+  {
+   "output": "- Premium_LRS managed disks whose `id` appears in the opted-out disk ID list fetched from acmeconfig.example.net are flagged. Disks on any other SKU, and Premium_LRS disks not on that list, pass and are never acted on. HIGH, no compliance frameworks; runs on a scheduled pull scan, timing set by the platform; changes the disk's SKU to Standard_LRS, retrying up to 2 times with a 10-second delay between attempts. acme:disk-premium-to-standard@1",
+   "fails": []
+  }
+ ]
+}

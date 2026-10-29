@@ -1,0 +1,43 @@
+[project]
+name = "agent-skills"
+version = "0.1.0"
+# Python for the dev tooling only: the skill scripts are stdlib-only and must
+# keep running on 3.11+ (see ruff's target-version).
+requires-python = ">=3.14.0"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pre-commit>=4.6.2",
+  "pytest>=9.1.1",
+  "ruff>=0.16.10",
+  "skills-ref>=0.1.1",
+]
+
+[tool.uv]
+# Refuse package versions published inside this window, so a freshly-uploaded
+# compromised release can't be pulled in before detection tooling reacts.
+exclude-newer = "7 days"
+
+[tool.ruff]
+target-version = "py311"
+lint.extend-select = [ "I", "PT", "UP" ]
+lint.isort.lines-after-imports = 2
+lint.isort.lines-between-types = 1
+
+[tool.pytest]
+ini_options.testpaths = [ "tests" ]
+ini_options.pythonpath = [
+  "plugins/stacklet/skills/guardrails/scripts",
+  "tests",
+  "tests/evals",
+  "tests/fixture",
+  "tests/evals/skill",
+]
+# importlib: every eval's controls are tests/evals/skill/NN-name/test_checks.py, and the default mode
+# can't import two test modules with the same name
+ini_options.addopts = [ "--import-mode=importlib" ]

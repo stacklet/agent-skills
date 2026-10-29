@@ -1,0 +1,15 @@
+# The exact membership of some collections (which policy versions they bind), with those versions'
+# content, `source` being the policy as JSON (not `sourceYAML`: the same again, doubling the
+# response). `scope.py DEPLOYMENT query` prints it in batches, filling in __POSTURE__ (the posture's
+# refresh id, which the response carries back, so a membership counts under the posture it was
+# fetched under) and one collection line per collection, aliased from its uuid. `first` is a page
+# size: ingest refuses a truncated membership.
+{
+  platform { urls { console } }
+  __POSTURE__: __typename
+  __ALIAS__: policyCollection(uuid: "__UUID__") { ...Collection }
+}
+fragment Collection on PolicyCollection {
+  uuid
+  policyMappings(first: 10000) { pageInfo { total hasNextPage } edges { node { policy { uuid version name provider resourceType mode severity compliance source } } } }
+}

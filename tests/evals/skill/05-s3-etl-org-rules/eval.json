@@ -1,0 +1,5 @@
+{
+  "kind": "discriminating",
+  "prompt": "need a terraform s3 bucket where our nightly ETL job writes its parquet output. internal analytics team reads from it. keep it simple.",
+  "expected_output": "SSE-KMS with a customer-managed key (not AES256), required tags cost-center and data-classification (valid value, e.g. internal), public access blocked."
+}

@@ -1,0 +1,88 @@
+{
+ "about": "A policy whose only action is notify tells someone: the bullet must not say it fixes, remediates or enables anything.",
+ "resource_type": "aws.iam-user",
+ "policies": [
+  {
+   "name": "acme:iam-user-mfa",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "iam-user-mfa",
+    "resource": "aws.iam-user",
+    "description": "Users must have MFA; owners are told.",
+    "filters": [
+     {
+      "type": "credential",
+      "key": "mfa_active",
+      "value": false
+     }
+    ],
+    "actions": [
+     {
+      "type": "notify",
+      "to": [
+       "resource-owner"
+      ],
+      "subject": "MFA missing",
+      "transport": {
+       "type": "sqs",
+       "queue": "https://sqs.us-east-1.amazonaws.com/123456789012/notify"
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "tells-not-fixes",
+   "policies": [
+    "acme:iam-user-mfa"
+   ],
+   "says": [
+    "MFA|mfa_active",
+    "notif|tell|email|messages?|alert"
+   ],
+   "not": [
+    "\\b(fix(es|ed)?|remediat\\w*|corrects?|enforces?)\\b|\\b(enables?|turns on|activates?) (MFA|it)\\b|\\b(and|then|so)\\s+(MFA|it|an MFA device) (is|gets?) (turned on|enabled|activated|added|set up)\\b",
+    "(?:^|[.;:]\\s*)(?:(?!\\b(?:not|never|nothing)\\b|n't\\b)[^.;\\n])*?\\b(disables?|revokes?|removes?|deletes?|deactivates?|locks?|suspends?)\\b[^.;]{0,40}\\b(access|login|console|keys?|password|the user|users?)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- IAM users without an active MFA device (`mfa_active` false) are flagged. Users with MFA pass. HIGH, CIS; notifies the resource owner. acme:iam-user-mfa@1",
+   "fails": []
+  },
+  {
+   "output": "- IAM users without an active MFA device are flagged and remediated by notifying the owner. Users with MFA pass. HIGH, CIS. acme:iam-user-mfa@1",
+   "fails": [
+    "tells-not-fixes"
+   ]
+  },
+  {
+   "output": "- IAM users without an active MFA device are flagged; the owner is notified and MFA is turned on. Users with MFA pass. HIGH, CIS. acme:iam-user-mfa@1",
+   "fails": [
+    "tells-not-fixes"
+   ]
+  },
+  {
+   "output": "- IAM users whose MFA is not enabled (`mfa_active` false) are flagged. Users whose MFA is enabled pass. HIGH, CIS; notifies the resource owner by message. acme:iam-user-mfa@1",
+   "fails": []
+  },
+  {
+   "output": "- IAM users without an active MFA device are flagged. Users with MFA pass. HIGH, CIS; emails the owner, then disables the user's console access. acme:iam-user-mfa@1",
+   "fails": [
+    "tells-not-fixes"
+   ]
+  },
+  {
+   "output": "- IAM users whose credential report shows `mfa_active` false are flagged, meaning they have no active MFA device. Users with an active MFA device pass. The platform scans this on its own schedule, and the policy only notifies, so it does not change or remove the user. HIGH, CIS; notifies. acme:iam-user-mfa@1",
+   "fails": []
+  }
+ ]
+}

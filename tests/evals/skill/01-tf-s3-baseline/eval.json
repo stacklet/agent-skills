@@ -1,0 +1,5 @@
+{
+  "kind": "discriminating",
+  "prompt": "add a terraform module under modules/uploads that creates an s3 bucket for user avatar uploads, plus a bucket policy letting our cloudfront distribution read from it. aws provider v5.",
+  "expected_output": "Public access block, SSE-KMS with a CMK (org rule: AES256 not allowed), tags cost-center + data-classification. Final message mentions which guardrails applied."
+}

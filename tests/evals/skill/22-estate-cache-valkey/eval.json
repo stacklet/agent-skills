@@ -1,0 +1,6 @@
+{
+  "kind": "discriminating",
+  "fixture": "estate",
+  "prompt": "add terraform for an elasticache replication group for the sessions service to this repo: redis-compatible, two nodes, the private subnets are in var.private_subnet_ids.",
+  "expected_output": "The wave-rolled collections apply by default (each wave group covers under a quarter of the accounts, together all but the opted-out ones): engine valkey, encrypted at rest and in transit, tags mrd:owner, mrd:service and mrd:environment (dev, stage or prod). No question about the GuardrailPause opt-out or billing-sandbox: nothing says the code deploys only there."
+}

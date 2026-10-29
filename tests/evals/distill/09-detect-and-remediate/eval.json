@@ -1,0 +1,126 @@
+{
+ "about": "The same open-SSH condition, once detect-only and once removing the rule: one bullet saying both what is flagged and that the rule is removed.",
+ "resource_type": "aws.security-group",
+ "policies": [
+  {
+   "name": "cis:sg-open-ssh",
+   "version": 1,
+   "severity": "high",
+   "mode": "pull",
+   "compliance": [
+    "CIS"
+   ],
+   "source": {
+    "name": "sg-open-ssh",
+    "resource": "aws.security-group",
+    "description": "No SSH from anywhere.",
+    "filters": [
+     {
+      "type": "ingress",
+      "Ports": [
+       22
+      ],
+      "Cidr": {
+       "value": "0.0.0.0/0"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "acme:sg-open-ssh-remove",
+   "version": 1,
+   "severity": "critical",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "sg-open-ssh-remove",
+    "resource": "aws.security-group",
+    "description": "Close SSH open to the world.",
+    "filters": [
+     {
+      "type": "ingress",
+      "Ports": [
+       22
+      ],
+      "Cidr": {
+       "value": "0.0.0.0/0"
+      }
+     }
+    ],
+    "actions": [
+     {
+      "type": "remove-permissions",
+      "ingress": "matched"
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "says-the-action",
+   "together": true,
+   "policies": [
+    "cis:sg-open-ssh",
+    "acme:sg-open-ssh-remove"
+   ],
+   "says": [
+    "\\b22\\b",
+    "0\\.0\\.0\\.0/0",
+    "\\b(removes?|revokes?|deletes?|removing|revoking)\\b|(?:^|[.;]\\s)(?:(?!\\b(?:once|if|when|until|unless|after)\\b)[^.;])*\\b(is|are|gets?) (automatically )?(removed|revoked|deleted)\\b"
+   ],
+   "not": [
+    "\\b(critical|high|medium|low)\\b[^.;]*\\b(critical|high|medium|low)\\b[^.;]*;\\s*(reports? only|only reports?)\\b",
+    "\\b(both|all|neither|none)\\b[^.;]*\\b(reports? only|only reports?|removes?|revokes?|deletes?)\\b",
+    "\\bno (one|policy|polic\\w*|action)\\b[^.;]{0,30}\\b(removes?|revokes?|deletes?)\\b"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged. Groups limiting SSH to narrower ranges pass. CRITICAL (ORG), HIGH (CIS); one policy removes the matching rule, the other reports only. cis:sg-open-ssh@1 acme:sg-open-ssh-remove@1",
+   "fails": []
+  },
+  {
+   "output": "- Security groups with an ingress rule covering port 22 from `0.0.0.0/0` are flagged. Groups without such a rule pass. CRITICAL, ORG: scheduled scans remove the matching ingress rule (acme:sg-open-ssh-remove@1); HIGH, CIS: reports only (cis:sg-open-ssh@1).",
+   "fails": []
+  },
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged. Narrower ranges pass. CRITICAL, HIGH; reports only. cis:sg-open-ssh@1 acme:sg-open-ssh-remove@1",
+   "fails": [
+    "says-the-action"
+   ]
+  },
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged. Groups with that rule removed or narrowed pass. CRITICAL, HIGH; reports only. cis:sg-open-ssh@1 acme:sg-open-ssh-remove@1",
+   "fails": [
+    "says-the-action"
+   ]
+  },
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged. Groups pass once that rule is removed. CRITICAL, HIGH; reports only. cis:sg-open-ssh@1 acme:sg-open-ssh-remove@1",
+   "fails": [
+    "says-the-action"
+   ]
+  },
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged; under acme:sg-open-ssh-remove@1 (CRITICAL, ORG) the matching rule is removed, and cis:sg-open-ssh@1 (HIGH, CIS) only reports.",
+   "fails": []
+  },
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged; neither policy removes the rule, both report only. CRITICAL (ORG), HIGH (CIS). cis:sg-open-ssh@1 acme:sg-open-ssh-remove@1",
+   "fails": [
+    "says-the-action"
+   ]
+  },
+  {
+   "output": "- Security groups allowing ingress on port 22 from 0.0.0.0/0 are flagged. CRITICAL (ORG) and HIGH (CIS). Reports only: no policy removes the rule. cis:sg-open-ssh@1 acme:sg-open-ssh-remove@1",
+   "fails": [
+    "says-the-action"
+   ]
+  }
+ ]
+}

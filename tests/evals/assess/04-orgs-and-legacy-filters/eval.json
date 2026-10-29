@@ -1,0 +1,3 @@
+{
+  "shape": "Several AWS orgs and OU paths, mostly legacy filter strings, and remediation collections keyed on a tag's value."
+}

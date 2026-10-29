@@ -1,0 +1,10 @@
+{
+  "kind": "discriminating",
+  "prompt": "convert the orders queue to FIFO, we need per-customer ordering",
+  "setup": "outputs start as a copy of fixture/orders-repo committed as a git repo (existing Terraform whose resources already violate some guardrails: the queue has no DLQ, CMK or required tags, the consumer lambda has no reserved concurrency or X-Ray tracing, the reports bucket uses AES256 and lacks required tags, the worker's volume is gp2 and the instance allows IMDSv1, the orders database is unencrypted and lacks required tags, and the public docs bucket turns its public access block off, which a CIS guardrail with a set-public-block action puts back; locals.tf holds the repo's own values for the required tags); no Stacklet MCP server, as in every run",
+  "start": {
+    "copy": "orders-repo",
+    "commit": "orders infra"
+  },
+  "expected_output": "Makes the queue FIFO (name ending .fifo) and says this replaces the queue (or builds it alongside for a cutover). Because the queue is new anyway, gives it the guardrails: a (FIFO) DLQ with maxReceiveCount <= 5, required tags, and a customer-managed key, or an explanation of why not (producers and the consumer role, managed elsewhere, would need kms:Decrypt/GenerateDataKey). Leaves every other existing resource intact. Opposite failure mode to the other brownfield evals: treating a replacement as a light-touch edit."
+}

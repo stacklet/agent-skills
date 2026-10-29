@@ -1,0 +1,72 @@
+{
+ "about": "The filter flags a Timeout over 300 seconds (its description, never shown to the model, only asks for quick timeouts). The bullet carries the threshold, on the right side of it (over 300 flagged, 300 itself passes).",
+ "resource_type": "aws.lambda",
+ "policies": [
+  {
+   "name": "acme:lambda-timeout",
+   "version": 1,
+   "severity": "medium",
+   "mode": "pull",
+   "compliance": [
+    "ORG"
+   ],
+   "source": {
+    "name": "lambda-timeout",
+    "resource": "aws.lambda",
+    "description": "Functions should time out quickly.",
+    "filters": [
+     {
+      "type": "value",
+      "key": "Timeout",
+      "op": "gt",
+      "value": 300
+     }
+    ]
+   }
+  }
+ ],
+ "expect": [
+  {
+   "id": "carries-the-threshold",
+   "policies": [
+    "acme:lambda-timeout"
+   ],
+   "says": [
+    "Timeout",
+    "(over|above|more than|greater than|exceed\\w*|longer than|>)\\s*[^.;]{0,25}?`?300\\b"
+   ],
+   "not": [
+    "300( seconds)? or (more|above|longer)|at least 300|>=\\s*`?300",
+    "\\b300\\b( seconds)? (itself (is|are)|(is|are) also) (also )?flagged|\\b(exactly|of) `?300`?( seconds)? (is|are) (also )?flagged"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "output": "- Lambda functions with a `Timeout` over 300 seconds are flagged. Functions with a `Timeout` of 300 seconds or less pass. MEDIUM, ORG; reports only. acme:lambda-timeout@1",
+   "fails": []
+  },
+  {
+   "output": "- Lambda functions with long timeouts are flagged. Functions that time out quickly pass. MEDIUM, ORG; reports only. acme:lambda-timeout@1",
+   "fails": [
+    "carries-the-threshold"
+   ]
+  },
+  {
+   "output": "- Lambda functions with a `Timeout` of 300 seconds or more are flagged. Shorter timeouts pass. MEDIUM, ORG; reports only. acme:lambda-timeout@1",
+   "fails": [
+    "carries-the-threshold"
+   ]
+  },
+  {
+   "output": "- Lambda functions with a `Timeout` exceeding 5 minutes (300 s) are flagged. Functions with 300 seconds or less pass. MEDIUM, ORG; reports only. acme:lambda-timeout@1",
+   "fails": []
+  },
+  {
+   "output": "- Lambda functions with a `Timeout` greater than 300 are flagged, and 300 itself is flagged too. Shorter timeouts pass. MEDIUM, ORG; reports only. acme:lambda-timeout@1",
+   "fails": [
+    "carries-the-threshold"
+   ]
+  }
+ ]
+}
