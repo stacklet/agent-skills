@@ -99,6 +99,15 @@ def envelope(stdout):
         env = json.loads(stdout.decode("utf-8"))
     except ValueError:  # UnicodeDecodeError too
         return None
+    # verbose (the flag, or `"verbose": true` in the user settings the call loads) prints the
+    # session's events as a list instead, the envelope last among them as the "result" event
+    if isinstance(env, list):
+        results = (
+            e
+            for e in reversed(env)
+            if isinstance(e, dict) and e.get("type") == "result"
+        )
+        env = next(results, None)
     return env if isinstance(env, dict) else None
 
 
