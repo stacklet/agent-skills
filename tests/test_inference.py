@@ -77,15 +77,27 @@ def test_an_invalid_command_is_refused(env, bad):
         _inference.command("assess")
 
 
-def test_the_default_command_s_envelope_gives_answer_tokens_and_cost(tmp_path):
+# what `--output-format json` prints, given the envelope as a Python expression: the envelope alone,
+# or (verbose, as a user setting can make it) a list of the session's events ending in it
+SHAPES = {
+    "object": "{}",
+    "events": "[{{'type': 'system', 'subtype': 'init'}}, {{'type': 'assistant'}},"
+    " {{'type': 'rate_limit_event'}}, {}]",
+}
+shapes = pytest.mark.parametrize("shape", SHAPES.values(), ids=SHAPES.keys())
+
+
+@shapes
+def test_the_default_command_s_envelope_gives_answer_tokens_and_cost(tmp_path, shape):
     # stands in for claude: whatever the arguments, the envelope `--output-format json` gives
+    envelope = (
+        "{'type': 'result', 'is_error': False, 'result': ' the answer ',"
+        " 'total_cost_usd': 0.02, 'usage': {'input_tokens': 9, 'cache_creation_input_tokens': 900,"
+        " 'cache_read_input_tokens': 91, 'output_tokens': 40}}"
+    )
     exe = stub(
         tmp_path,
-        "import json, sys\n"
-        "sys.stdin.read()\n"
-        "print(json.dumps({'type': 'result', 'is_error': False, 'result': ' the answer ',"
-        " 'total_cost_usd': 0.02, 'usage': {'input_tokens': 9, 'cache_creation_input_tokens': 900,"
-        " 'cache_read_input_tokens': 91, 'output_tokens': 40}}))\n",
+        f"import json, sys\nsys.stdin.read()\nprint(json.dumps({shape.format(envelope)}))\n",
     )
     text, stats = _inference.run("q", claude_at(exe))
     assert text == "the answer"
@@ -94,7 +106,7 @@ def test_the_default_command_s_envelope_gives_answer_tokens_and_cost(tmp_path):
     assert stats["cost_usd"] == 0.02
     # a custom command: its output is the answer, and only time is known
     text, stats = _inference.run("q", _inference.Command([str(exe)], custom=True))
-    assert text.startswith('{"type": "result"')
+    assert text.startswith(shape[0])
     assert set(stats) == {"seconds"}
 
 
@@ -112,13 +124,15 @@ def test_an_envelope_reporting_an_error_is_one(tmp_path):
         )
 
 
-def test_a_failing_default_command_says_why_from_its_envelope(tmp_path):
+@shapes
+def test_a_failing_default_command_says_why_from_its_envelope(tmp_path, shape):
     # in JSON mode claude reports a failure on stdout, in the envelope, not on stderr
+    envelope = (
+        "{'type': 'result', 'is_error': True, 'result': 'API Error: 529 overloaded'}"
+    )
     exe = stub(
         tmp_path,
-        "import json, sys\n"
-        "print(json.dumps({'is_error': True, 'result': 'API Error: 529 overloaded'}))\n"
-        "sys.exit(1)\n",
+        f"import json, sys\nprint(json.dumps({shape.format(envelope)}))\nsys.exit(1)\n",
     )
     with pytest.raises(
         _inference.InferenceError, match=r"failed \(exit 1\): API Error: 529 overloaded"
@@ -175,8 +189,12 @@ def test_odd_usage_values_count_nothing_rather_than_fail(tmp_path, envelope):
     )
 
 
-def test_no_envelope_from_the_default_command_is_an_error(tmp_path):
-    exe = stub(tmp_path, "print('just text')\n")
+@pytest.mark.parametrize(
+    "output",
+    ["just text", "[]", '[{"type": "system"}, {"type": "assistant"}]', '"a string"'],
+)
+def test_no_envelope_from_the_default_command_is_an_error(tmp_path, output):
+    exe = stub(tmp_path, f"print({output!r})\n")
     with pytest.raises(_inference.InferenceError, match="wrote no result envelope"):
         _inference.run(
             "q",
